@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc9be5912c41d8f47b851ea9250c96f7, type: 3}
+  m_Name: Armor_SoldiersToken
+  m_EditorClassIdentifier: 
+  id: armor_soldierstoken
+  DisplayName: Soldier's Token
+  Description: A dead comrade's tag. You fight a little longer for them.
+  Category: 4
+  Icon: {fileID: 0}
+  PlaceholderColor: {r: 0.55, g: 0.45, b: 0.35, a: 1}
+  MaxStack: 1
+  BaseValue: 90
+  Slot: 4
+  Modifiers:
+  - Stat: 2
+    Flat: 15
+    Percent: 0

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd224cc0e6d9dde4b8766c12817082a7, type: 3}
+  m_Name: Skill_Farming_DeepRoots
+  m_EditorClassIdentifier: 
+  id: skill_farming_deeproots
+  DisplayName: Deep Roots
+  Description: Your crops survive one more dry day before wilting or dying.
+  Kind: 0
+  Discipline: 1
+  Class: {fileID: 0}
+  Tier: 2
+  RequiredLevel: 3
+  Cost: 1
+  Prerequisites: []
+  PassiveModifiers:
+  - Stat: 9
+    Flat: 1
+    Percent: 0
+  Cooldown: 8
+  RequiredMoveset: {fileID: 0}
+  Attack: {fileID: 0}
+  Buff: []
+  BuffDuration: 0

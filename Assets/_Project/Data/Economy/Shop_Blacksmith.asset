@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f873188c0c8e4d9895df86a96e4d4, type: 3}
+  m_Name: Shop_Blacksmith
+  m_EditorClassIdentifier: 
+  id: shop_blacksmith
+  MerchantName: Brenna's Forge
+  Greeting: Steel doesn't care whose side you fought on. Neither do I. Bring me scrap
+    and I'll pay for it.
+  Stock:
+  - Item: {fileID: 11400000, guid: b9feff384579a0747880317d225e441b, type: 2}
+    DailyStock: 1
+  - Item: {fileID: 11400000, guid: 4244c1192e4d68641b9bb87c876e8c82, type: 2}
+    DailyStock: 1
+  - Item: {fileID: 11400000, guid: aff556a9355109143bfab54632caa584, type: 2}
+    DailyStock: 1
+  - Item: {fileID: 11400000, guid: 483a7f2df294849429b9b19cc8817a93, type: 2}
+    DailyStock: 1
+  - Item: {fileID: 11400000, guid: 151065e72e0416841a939823bf770d21, type: 2}
+    DailyStock: 2
+  - Item: {fileID: 11400000, guid: cd7da67d131e06f4a9329dd38f5de085, type: 2}
+    DailyStock: 2
+  - Item: {fileID: 11400000, guid: e2f10d898f042354aaa43e4902e702c5, type: 2}
+    DailyStock: 1
+  SellMarkup: 1.25
+  BuyRate: 0.5
+  Buys: 0000000004000000
+  SaturationPerUnit: 0.04
+  MinDemand: 0.4
+  DailyRecovery: 0.35

@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da7587a8616df3a49b081773fa5bff3e, type: 3}
+  m_Name: Loot_Bandit
+  m_EditorClassIdentifier: 
+  id: loot_bandit
+  Entries:
+  - Item: {fileID: 11400000, guid: f77bf659ee1e32e45a0719500d08f57b, type: 2}
+    Chance: 0.8
+    Min: 1
+    Max: 2
+  - Item: {fileID: 11400000, guid: b49b18a7746d8764abbc1d0457e6710d, type: 2}
+    Chance: 0.35
+    Min: 1
+    Max: 1
+  - Item: {fileID: 11400000, guid: d605ac237ec54b64db635459af7da046, type: 2}
+    Chance: 0.3
+    Min: 1
+    Max: 3
+  - Item: {fileID: 11400000, guid: f5085ec1d766f074b81265f333bc9767, type: 2}
+    Chance: 0.25
+    Min: 1
+    Max: 1
+  MinGold: 3
+  MaxGold: 12

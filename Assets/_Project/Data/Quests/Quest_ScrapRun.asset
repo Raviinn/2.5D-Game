@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9725793c74b2af64f976e3019de7adbe, type: 3}
+  m_Name: Quest_ScrapRun
+  m_EditorClassIdentifier: 
+  id: quest_scraprun
+  Title: Scrap Run
+  Summary: Iron is scarce since the war. Brenna pays well for scrap.
+  Type: 1
+  TurnInAt: Brenna
+  Prerequisites: []
+  RequiredTier: 0
+  Objectives:
+  - Type: 1
+    Description: 
+    Enemy: {fileID: 0}
+    Item: {fileID: 11400000, guid: b49b18a7746d8764abbc1d0457e6710d, type: 2}
+    Crop: {fileID: 0}
+    Count: 4
+  TakeItemsOnTurnIn: 1
+  AutoComplete: 0
+  GoldReward: 60
+  ItemRewards: []
+  CombatXp: 40
+  FarmingXp: 0
+  StandingReward: 20

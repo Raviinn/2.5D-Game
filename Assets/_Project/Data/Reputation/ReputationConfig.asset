@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba11831bd1990a149b9366983dae9971, type: 3}
+  m_Name: ReputationConfig
+  m_EditorClassIdentifier: 
+  FactionName: Free Hollows
+  Tiers:
+  - Name: Stranger
+    MinStanding: 0
+    PriceModifier: 1
+    Perk: Standard prices
+  - Name: Known
+    MinStanding: 50
+    PriceModifier: 0.95
+    Perk: 5% better prices
+  - Name: Trusted
+    MinStanding: 150
+    PriceModifier: 0.9
+    Perk: "10% better prices \xB7 Town Patrol contract"
+  - Name: Friend
+    MinStanding: 300
+    PriceModifier: 0.85
+    Perk: 15% better prices
+  - Name: Hero of the Hollows
+    MinStanding: 500
+    PriceModifier: 0.8
+    Perk: 20% better prices
+  DailyKillCap: 20
+  GoldPerTradePoint: 25
+  DailyTradeCap: 15
+  AbandonPenalty: 5

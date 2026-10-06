@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cb0380e530b8894fa6d95e18a5be180, type: 3}
+  m_Name: Enemy_Bandit
+  m_EditorClassIdentifier: 
+  id: enemy_bandit
+  DisplayName: Bandit
+  MaxHealth: 70
+  MaxPoise: 30
+  IsTrainingDummy: 0
+  MoveSpeed: 3.4
+  TurnSpeed: 540
+  AggroRange: 12
+  AttackRange: 2
+  AttackCooldown: 1.1
+  Attacks:
+  - {fileID: 11400000, guid: d43e97613b9c6e348b2985db38f8de45, type: 2}
+  - {fileID: 11400000, guid: 7001e5b8ca5164b489e64aec5b450349, type: 2}
+  XpReward: 25
+  StandingReward: 2
+  Loot: {fileID: 11400000, guid: 512163edc5c94564eb6ad405b75bde4e, type: 2}
+  RespawnDelay: 6

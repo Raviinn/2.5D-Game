@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1b330123d89abd4891fbdb257465e12, type: 3}
+  m_Name: Knight_Greatsword
+  m_EditorClassIdentifier: 
+  id: knight_greatsword
+  DisplayName: Greatsword
+  LightCombo:
+  - {fileID: 11400000, guid: af0c7569b07f5d644a2005dccd30aa4e, type: 2}
+  - {fileID: 11400000, guid: 43cd1bdc71cc0e04fa45b2cde1bb343e, type: 2}
+  - {fileID: 11400000, guid: cda6c1be9ce74d643b2eec7ca1db2d62, type: 2}
+  Heavy: {fileID: 11400000, guid: 069e015ea700d354a9b479ff0ec213f5, type: 2}
+  ComboResetTime: 0.5
+  DodgeDistance: 4
+  DodgeDuration: 0.36
+  IFrameStart: 0.03
+  IFrameEnd: 0.26
+  DodgeStaminaCost: 25
+  BlockDamageReduction: 0.7
+  ParryWindow: 0.12
+  BlockMoveSpeedMultiplier: 0.35
+  BlockStaminaPerDamage: 1.5
+  ParryStaggerDuration: 1.8
+  GuardBreakStaggerDuration: 1.2

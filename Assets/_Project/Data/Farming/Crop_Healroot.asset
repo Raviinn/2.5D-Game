@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 261b11f7f635176469e175bd65eac5bb, type: 3}
+  m_Name: Crop_Healroot
+  m_EditorClassIdentifier: 
+  id: crop_healroot
+  DisplayName: Healroot
+  Seed: {fileID: 11400000, guid: bda1ade11f3dac44caee76279609cf2a, type: 2}
+  Produce: {fileID: 11400000, guid: ea6fe0195ea03404db62fff89955f30d, type: 2}
+  ProduceMin: 1
+  ProduceMax: 3
+  HarvestXp: 8
+  DaysPerStage: 020000000200000002000000
+  RegrowDays: 3
+  WiltAfterDryDays: 2
+  DieAfterDryDays: 3
+  Sheet: {fileID: 2800000, guid: be0b5bcb1d3f4d24dbd4ba17a609e4f4, type: 3}
+  FrameSize: 32
+  PixelsPerUnit: 40

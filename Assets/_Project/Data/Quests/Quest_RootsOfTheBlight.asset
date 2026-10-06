@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9725793c74b2af64f976e3019de7adbe, type: 3}
+  m_Name: Quest_RootsOfTheBlight
+  m_EditorClassIdentifier: 
+  id: quest_rootsoftheblight
+  Title: Roots of the Blight
+  Summary: Brenna found ash that moves. She'll only show someone who has bled for
+    the town.
+  Type: 0
+  TurnInAt: Brenna
+  Prerequisites:
+  - {fileID: 11400000, guid: 3897f086c8a0b3946858513899ba3a8b, type: 2}
+  RequiredTier: 0
+  Objectives:
+  - Type: 3
+    Description: Hear Brenna out at the forge
+    Enemy: {fileID: 0}
+    Item: {fileID: 0}
+    Crop: {fileID: 0}
+    Count: 1
+  - Type: 1
+    Description: 
+    Enemy: {fileID: 0}
+    Item: {fileID: 11400000, guid: ea6fe0195ea03404db62fff89955f30d, type: 2}
+    Crop: {fileID: 0}
+    Count: 1
+  TakeItemsOnTurnIn: 1
+  AutoComplete: 0
+  GoldReward: 30
+  ItemRewards: []
+  CombatXp: 30
+  FarmingXp: 40
+  StandingReward: 40

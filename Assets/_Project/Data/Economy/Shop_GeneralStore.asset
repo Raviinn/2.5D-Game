@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1f873188c0c8e4d9895df86a96e4d4, type: 3}
+  m_Name: Shop_GeneralStore
+  m_EditorClassIdentifier: 
+  id: shop_generalstore
+  MerchantName: Oswin's Provisions
+  Greeting: "Seeds, bread, a draught or two. And I'll buy whatever you drag back
+    from the wilds \u2014 at a fair price, mostly."
+  Stock:
+  - Item: {fileID: 11400000, guid: d605ac237ec54b64db635459af7da046, type: 2}
+    DailyStock: 20
+  - Item: {fileID: 11400000, guid: bda1ade11f3dac44caee76279609cf2a, type: 2}
+    DailyStock: 5
+  - Item: {fileID: 11400000, guid: f5085ec1d766f074b81265f333bc9767, type: 2}
+    DailyStock: 10
+  - Item: {fileID: 11400000, guid: 4f508345f9c80464d9291877b5111771, type: 2}
+    DailyStock: 3
+  SellMarkup: 1.25
+  BuyRate: 0.5
+  Buys: 00000000030000000100000002000000
+  SaturationPerUnit: 0.04
+  MinDemand: 0.4
+  DailyRecovery: 0.35

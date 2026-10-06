@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cb0380e530b8894fa6d95e18a5be180, type: 3}
+  m_Name: Enemy_TrainingDummy
+  m_EditorClassIdentifier: 
+  id: enemy_trainingdummy
+  DisplayName: Training Dummy
+  MaxHealth: 200
+  MaxPoise: 50
+  IsTrainingDummy: 1
+  MoveSpeed: 3.4
+  TurnSpeed: 540
+  AggroRange: 12
+  AttackRange: 2
+  AttackCooldown: 1.1
+  Attacks: []
+  XpReward: 2
+  Loot: {fileID: 11400000, guid: 7dd97bcf5b465fc43b7850ccb2c0c05d, type: 2}
+  RespawnDelay: 3

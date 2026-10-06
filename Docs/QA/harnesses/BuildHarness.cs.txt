@@ -1,0 +1,35 @@
+﻿using System.Linq;
+using UnityEditor;
+using UnityEngine;
+
+public static class BuildHarness
+{
+    public static void Build()
+    {
+        Beast.EditorTools.ReputationSetup.Run();
+        Beast.EditorTools.ClimbingSetup.Run();
+        Beast.EditorTools.SpriteShadowSetup.Run();
+        Beast.EditorTools.EnemyAISetup.Run();
+        Beast.EditorTools.DayNightSetup.Run();
+        Beast.EditorTools.NightDangerSetup.Run();
+        Beast.EditorTools.MainMenuSetup.Run();
+        Beast.EditorTools.EnvironmentSetup.AddRoofColliders();
+
+        PlayerSettings.runInBackground = true; // unattended runs must not pause when the window loses focus
+        PlayerSettings.productName = "BeastHarness"; // separate save folder: never touches the real game's saves
+        var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+        Debug.Log("[BuildHarness] scenes: " + string.Join(", ", scenes));
+        var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+        {
+            scenes = scenes,
+            locationPathName = System.IO.Path.GetFullPath("../harnessbuild/BeastHarness.exe"),
+            target = BuildTarget.StandaloneWindows64,
+            options = BuildOptions.Development,
+        });
+        Debug.Log($"[BuildHarness] {report.summary.result} errors={report.summary.totalErrors}");
+    }
+}
+
+
+
+

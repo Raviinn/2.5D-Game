@@ -1,0 +1,29 @@
+{
+    "name":  "Beast.Editor",
+    "rootNamespace":  "Beast.EditorTools",
+    "references":  [
+                       "Beast.Core",
+                       "Beast.Gameplay",
+                       "Unity.InputSystem",
+                       "Ink-Libraries"
+                   ],
+    "includePlatforms":  [
+                             "Editor"
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
+}

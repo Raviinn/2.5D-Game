@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9725793c74b2af64f976e3019de7adbe, type: 3}
+  m_Name: Contract_BanditBounty
+  m_EditorClassIdentifier: 
+  id: contract_banditbounty
+  Title: 'Bounty: Road Bandits'
+  Summary: The Free Hollows pay for every three deserters driven off the road.
+  Type: 2
+  TurnInAt: the Contracts Board
+  Prerequisites: []
+  RequiredTier: 0
+  Objectives:
+  - Type: 0
+    Description: 
+    Enemy: {fileID: 11400000, guid: 0df2cdbb993b0c6439b425f8d45d3e74, type: 2}
+    Item: {fileID: 0}
+    Crop: {fileID: 0}
+    Count: 3
+  TakeItemsOnTurnIn: 1
+  AutoComplete: 0
+  GoldReward: 45
+  ItemRewards: []
+  CombatXp: 40
+  FarmingXp: 0
+  StandingReward: 10
