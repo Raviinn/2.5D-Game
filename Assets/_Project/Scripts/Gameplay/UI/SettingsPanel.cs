@@ -5,15 +5,17 @@ using UnityEngine;
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// The Settings window, shared by the main menu and the pause menu (each owns one and draws it in OnGUI).
-    /// Tabs: Controls · Display · Audio · Interface. Every change applies at once and saves itself shortly after
-    /// (SettingsService); window mode / resolution changes ask to be kept and revert after a few seconds.
+    /// Settings on parchment (UI restyle step 2), in four categories: Controls · Display · Audio · Interface.
+    /// - The title screen draws it as a window (Draw): category cards along the top, the rows, Reset and Back.
+    /// - The Options tab of the game menu draws one category inline (DrawCategory) when its tile is chosen.
+    /// Every change applies at once and saves itself shortly after (SettingsService); window mode / resolution changes
+    /// ask to be kept and revert after a few seconds.
     /// </summary>
     public sealed class SettingsPanel
     {
         enum Tab { Controls, Display, Audio, Interface }
 
-        static readonly string[] TabNames = { "Controls", "Display", "Audio", "Interface" };
+        public static readonly string[] CategoryNames = { "Controls", "Display", "Audio", "Interface" };
         static readonly string[] WindowModeNames = { "Borderless", "Fullscreen", "Windowed" };
         static readonly FullScreenMode[] WindowModes = { FullScreenMode.FullScreenWindow, FullScreenMode.ExclusiveFullScreen, FullScreenMode.Windowed };
         static readonly string[] FrameCapNames = { "30", "60", "120", "144", "No limit" };
@@ -22,20 +24,31 @@ namespace Beast.Gameplay
         static readonly string[] AntiAliasingNames = { "Off", "2×", "4×", "8×" };
         static readonly int[] AntiAliasingSamples = { 1, 2, 4, 8 };
 
-        const float Width = 860f;
-        const float Height = 660f;
-        const float RowHeight = 50f;
-        const float LabelWidth = 300f;
+        const float Width = 920f;
+        const float Height = 720f;
+        const float RowHeight = 54f;
+        const float LabelWidth = 290f;
 
         Tab tab;
         bool confirmReset;
         List<Vector2Int> resolutions = new();
+        static GUIStyle rowLabel, valueLabel, bannerText;
 
         public bool IsOpen { get; private set; }
 
-        public void Open()
+        /// <summary>The category being shown (0 Controls, 1 Display, 2 Audio, 3 Interface).</summary>
+        public int Category
+        {
+            get => (int)tab;
+            set => tab = (Tab)Mathf.Clamp(value, 0, CategoryNames.Length - 1);
+        }
+
+        public void Open() => Open(Category);
+
+        public void Open(int category)
         {
             IsOpen = true;
+            Category = category;
             confirmReset = false;
             resolutions = SettingsService.AvailableResolutions();
         }
@@ -43,6 +56,7 @@ namespace Beast.Gameplay
         public void Close()
         {
             IsOpen = false;
+            confirmReset = false;
             if (Services.TryGet(out SettingsService settings))
             {
                 settings.KeepDisplay(); // leaving the screen counts as keeping what you see
@@ -50,16 +64,15 @@ namespace Beast.Gameplay
             }
         }
 
-        /// <summary>Draws the window when open (call inside a UITheme.Begin OnGUI). Esc or Back closes it.</summary>
+        /// <summary>The title screen's Settings window (call inside a UITheme.Begin OnGUI). Esc or Back closes it.</summary>
         public void Draw()
         {
             if (!IsOpen) return;
-            if (!Services.TryGet(out SettingsService settings))
+            if (!Services.TryGet(out SettingsService _))
             {
                 IsOpen = false;
                 return;
             }
-
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
             {
                 Event.current.Use();
@@ -67,44 +80,64 @@ namespace Beast.Gameplay
                 return;
             }
 
-            UITheme.Backdrop(0.35f);
-            var panel = new Rect((UITheme.Width - Width) * 0.5f, (UITheme.Height - Height) * 0.5f, Width, Mathf.Min(Height, UITheme.Height - 32f));
-            UITheme.Panel(panel);
-            GUI.Label(new Rect(panel.x + 24f, panel.y + 14f, 300f, 34f), "Settings", UITheme.Title);
-            GUI.Label(new Rect(panel.x + 24f, panel.y + 16f, Width - 48f, 30f),
-                $"<color={UITheme.MutedHex}>Changes apply right away and are saved for every slot</color>", UITheme.SmallRight);
+            var content = UITheme.ParchmentWindow(Width, Mathf.Min(Height, UITheme.Height - 32f), "Settings",
+                "Changes apply right away and are saved for every slot", backdrop: false);
+            Category = UITheme.PaperOptions(new Rect(content.x, content.y, content.width, 46f), Category, CategoryNames);
+            DrawCategory(new Rect(content.x, content.y + 62f, content.width, content.height - 62f - 64f), Category);
 
-            var tabsRect = new Rect(panel.x + 20f, panel.y + 62f, Width - 40f, 38f);
-            float tabWidth = (tabsRect.width - 18f) / TabNames.Length;
-            for (int i = 0; i < TabNames.Length; i++)
-                if (UITheme.Tab(new Rect(tabsRect.x + i * (tabWidth + 6f), tabsRect.y, tabWidth, tabsRect.height), TabNames[i], (int)tab == i))
-                    tab = (Tab)i;
-
-            var content = new Rect(panel.x + 20f, tabsRect.yMax + 12f, Width - 40f, panel.height - 66f - 38f - 12f - 80f);
-            UITheme.Inset(content);
-            var options = settings.Current;
-            GUI.changed = false;
-            float y = content.y + 14f;
-            switch (tab)
-            {
-                case Tab.Controls: DrawControls(content, ref y, options); break;
-                case Tab.Display: DrawDisplay(content, ref y, options, settings); break;
-                case Tab.Audio: DrawAudio(content, ref y, options); break;
-                case Tab.Interface: DrawInterface(content, ref y, options); break;
-            }
-            if (GUI.changed) settings.Apply();
-
-            DrawFooter(panel, settings);
+            float y = content.yMax - 48f;
+            DrawReset(new Rect(content.x, y, 320f, 48f));
+            if (UITheme.BrushButton(new Rect(content.xMax - 180f, y, 180f, 48f), "Back")) Close();
         }
 
-        // ---------- Tabs ----------
+        /// <summary>One category's rows on parchment (also the Options tab's inline view).</summary>
+        public void DrawCategory(Rect area, int category)
+        {
+            if (!Services.TryGet(out SettingsService settings)) return;
+            if (resolutions.Count == 0) resolutions = SettingsService.AvailableResolutions();
+            EnsureStyles();
+            var options = settings.Current;
+            GUI.changed = false;
+            float y = area.y + 6f;
+            switch ((Tab)category)
+            {
+                case Tab.Controls: DrawControls(area, ref y, options); break;
+                case Tab.Display: DrawDisplay(area, ref y, options, settings); break;
+                case Tab.Audio: DrawAudio(area, ref y, options); break;
+                case Tab.Interface: DrawInterface(area, ref y, options); break;
+            }
+            if (GUI.changed) settings.Apply();
+        }
+
+        /// <summary>"Reset to defaults" with a confirm (every setting but window mode and resolution).</summary>
+        public void DrawReset(Rect rect)
+        {
+            if (!Services.TryGet(out SettingsService settings)) return;
+            EnsureStyles();
+            if (!confirmReset)
+            {
+                if (UITheme.BrushButton(rect, "Reset to defaults")) confirmReset = true;
+                return;
+            }
+            GUI.Label(new Rect(rect.x, rect.y - 28f, 520f, 24f),
+                $"<color={UITheme.VermilionHex}>Reset every setting (not window mode or resolution)?</color>", rowLabel);
+            float half = rect.width * 0.5f - 5f;
+            if (UITheme.BrushButton(new Rect(rect.x, rect.y, half, rect.height), "Reset"))
+            {
+                settings.ResetToDefaults();
+                confirmReset = false;
+            }
+            if (UITheme.BrushButton(new Rect(rect.x + half + 10f, rect.y, half, rect.height), "Cancel")) confirmReset = false;
+        }
+
+        // ---------- Categories ----------
 
         void DrawControls(Rect area, ref float y, GameSettings o)
         {
             o.mouseSensitivity = SliderRow(area, ref y, "Mouse sensitivity", o.mouseSensitivity, 0.25f, 3f, 0.05f, $"{o.mouseSensitivity:0.00}×");
             o.stickSensitivity = SliderRow(area, ref y, "Controller look speed", o.stickSensitivity, 0.25f, 3f, 0.05f, $"{o.stickSensitivity:0.00}×");
             o.invertY = ToggleRow(area, ref y, "Invert vertical look", o.invertY);
-            Note(area, ref y, "Key rebinding comes with the final UI. The controls list is in the pause menu.");
+            Note(area, ref y, "Key rebinding comes with the final UI.");
         }
 
         void DrawDisplay(Rect area, ref float y, GameSettings o, SettingsService settings)
@@ -112,13 +145,13 @@ namespace Beast.Gameplay
             float left = settings.DisplayRevertSecondsLeft;
             if (left > 0f)
             {
-                var banner = new Rect(area.x + 12f, y - 4f, area.width - 24f, 44f);
-                UITheme.Fill(banner, new Color(0.35f, 0.25f, 0.08f, 0.9f));
-                GUI.Label(new Rect(banner.x + 14f, banner.y, banner.width - 260f, banner.height),
-                    $"Keep these display settings? Reverting in {Mathf.CeilToInt(left)} s", UITheme.BodyMiddle);
-                if (UITheme.Button(new Rect(banner.xMax - 236f, banner.y + 6f, 110f, 32f), "Keep", primary: true)) settings.KeepDisplay();
-                if (UITheme.Button(new Rect(banner.xMax - 118f, banner.y + 6f, 110f, 32f), "Revert")) settings.RevertDisplay();
-                y += 52f;
+                var banner = new Rect(area.x, y - 2f, area.width, 52f);
+                UITheme.InkPanel(banner);
+                GUI.Label(new Rect(banner.x + 18f, banner.y, banner.width - 300f, banner.height),
+                    $"Keep these display settings? Reverting in {Mathf.CeilToInt(left)} s", bannerText);
+                if (UITheme.BrushButton(new Rect(banner.xMax - 272f, banner.y + 6f, 124f, 40f), "Keep", light: true)) settings.KeepDisplay();
+                if (UITheme.BrushButton(new Rect(banner.xMax - 140f, banner.y + 6f, 124f, 40f), "Revert", light: true)) settings.RevertDisplay();
+                y += 62f;
             }
 
             int mode = System.Array.IndexOf(WindowModes, Screen.fullScreenMode);
@@ -129,7 +162,7 @@ namespace Beast.Gameplay
             if (res < 0) res = resolutions.Count - 1;
             string resText = res >= 0 ? $"{resolutions[res].x} × {resolutions[res].y}" : $"{Screen.width} × {Screen.height}";
             Label(area, y, "Resolution");
-            int newRes = UITheme.Stepper(new Rect(ControlX(area), y + 6f, 360f, 36f), res, resolutions.Count, resText, resolutions.Count > 1);
+            int newRes = UITheme.PaperStepper(new Rect(ControlX(area), y + 6f, 380f, 42f), res, resolutions.Count, resText, resolutions.Count > 1);
             y += RowHeight;
 
             if ((newMode != mode || newRes != res) && newRes >= 0)
@@ -150,7 +183,9 @@ namespace Beast.Gameplay
             o.masterVolume = SliderRow(area, ref y, "Master volume", o.masterVolume, 0f, 1f, 0.05f, $"{o.masterVolume * 100f:0}%");
             o.musicVolume = SliderRow(area, ref y, "Music", o.musicVolume, 0f, 1f, 0.05f, $"{o.musicVolume * 100f:0}%");
             o.effectsVolume = SliderRow(area, ref y, "Sound effects", o.effectsVolume, 0f, 1f, 0.05f, $"{o.effectsVolume * 100f:0}%");
-            Note(area, ref y, "The game has no sound yet; these apply as soon as it does.");
+            o.ambienceVolume = SliderRow(area, ref y, "Ambience", o.ambienceVolume, 0f, 1f, 0.05f, $"{o.ambienceVolume * 100f:0}%");
+            o.interfaceVolume = SliderRow(area, ref y, "Interface sounds", o.interfaceVolume, 0f, 1f, 0.05f, $"{o.interfaceVolume * 100f:0}%");
+            Note(area, ref y, "All sounds are placeholders for now, and there's no music yet.");
         }
 
         void DrawInterface(Rect area, ref float y, GameSettings o)
@@ -161,41 +196,27 @@ namespace Beast.Gameplay
             Note(area, ref y, "Damage numbers off still shows PARRY! and GUARD BREAK.");
         }
 
-        void DrawFooter(Rect panel, SettingsService settings)
-        {
-            float y = panel.yMax - 62f;
-            if (!confirmReset)
-            {
-                if (UITheme.Button(new Rect(panel.x + 20f, y, 220f, 42f), "Reset to defaults")) confirmReset = true;
-            }
-            else
-            {
-                GUI.Label(new Rect(panel.x + 20f, y - 22f, 420f, 20f), $"<color={UITheme.BadHex}>Reset every setting (not window mode or resolution)?</color>", UITheme.Small);
-                if (UITheme.Button(new Rect(panel.x + 20f, y, 110f, 42f), "Reset"))
-                {
-                    settings.ResetToDefaults();
-                    confirmReset = false;
-                }
-                if (UITheme.Button(new Rect(panel.x + 140f, y, 110f, 42f), "Cancel")) confirmReset = false;
-            }
-
-            GUI.Label(new Rect(panel.xMax - 380f, y, 180f, 42f), $"<color={UITheme.MutedHex}>Esc  back</color>", UITheme.SmallRight);
-            if (UITheme.Button(new Rect(panel.xMax - 180f, y, 160f, 42f), "Back", primary: true)) Close();
-        }
-
         // ---------- Rows ----------
 
-        static float ControlX(Rect area) => area.x + 20f + LabelWidth;
+        static void EnsureStyles()
+        {
+            if (rowLabel != null && rowLabel.font == UITheme.PaperBody.font) return;
+            rowLabel = new GUIStyle(UITheme.PaperBody) { alignment = TextAnchor.MiddleLeft, wordWrap = false };
+            valueLabel = new GUIStyle(rowLabel) { normal = { textColor = UITheme.InkGoldDark } };
+            bannerText = new GUIStyle(UITheme.InkBody) { alignment = TextAnchor.MiddleLeft, wordWrap = false };
+        }
+
+        static float ControlX(Rect area) => area.x + LabelWidth;
 
         static void Label(Rect area, float y, string text) =>
-            GUI.Label(new Rect(area.x + 20f, y, LabelWidth - 10f, RowHeight - 2f), text, UITheme.BodyMiddle);
+            GUI.Label(new Rect(area.x + 4f, y, LabelWidth - 14f, RowHeight - 2f), text, rowLabel);
 
         static float SliderRow(Rect area, ref float y, string label, float value, float min, float max, float step, string valueText)
         {
             Label(area, y, label);
             float x = ControlX(area);
-            value = UITheme.Slider(new Rect(x, y + 6f, 330f, 36f), value, min, max, step);
-            GUI.Label(new Rect(x + 344f, y, 100f, RowHeight - 2f), $"<color={UITheme.GoldHex}>{valueText}</color>", UITheme.BodyMiddle);
+            value = UITheme.PaperSlider(new Rect(x, y + 6f, 340f, 40f), value, min, max, step);
+            GUI.Label(new Rect(x + 356f, y, 110f, RowHeight - 2f), valueText, valueLabel);
             y += RowHeight;
             return value;
         }
@@ -203,24 +224,24 @@ namespace Beast.Gameplay
         static bool ToggleRow(Rect area, ref float y, string label, bool value)
         {
             Label(area, y, label);
-            value = UITheme.Toggle(new Rect(ControlX(area), y + 6f, 200f, 36f), value, value ? "On" : "Off");
+            value = UITheme.PaperToggle(new Rect(ControlX(area), y + 6f, 200f, 40f), value, value ? "On" : "Off");
             y += RowHeight;
             return value;
         }
 
         static int OptionsRow(Rect area, ref float y, string label, int selected, string[] options, bool enabled = true)
         {
-            Label(area, y, enabled ? label : $"<color={UITheme.MutedHex}>{label}</color>");
-            float width = Mathf.Min(area.xMax - ControlX(area) - 20f, options.Length * 110f);
-            selected = UITheme.Options(new Rect(ControlX(area), y + 7f, width, 34f), selected, options, enabled);
+            Label(area, y, enabled ? label : $"<color={UITheme.MutedOnPaperHex}>{label}</color>");
+            float width = Mathf.Min(area.xMax - ControlX(area), options.Length * 120f);
+            selected = UITheme.PaperOptions(new Rect(ControlX(area), y + 6f, width, 40f), selected, options, enabled);
             y += RowHeight;
             return selected;
         }
 
         static void Note(Rect area, ref float y, string text)
         {
-            GUI.Label(new Rect(area.x + 20f, y + 4f, area.width - 40f, 22f), $"<color={UITheme.MutedHex}>{text}</color>", UITheme.Small);
-            y += 30f;
+            GUI.Label(new Rect(area.x + 4f, y + 6f, area.width - 8f, 24f), text, UITheme.PaperMuted);
+            y += 34f;
         }
     }
 }

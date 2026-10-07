@@ -14,6 +14,9 @@ public static class BuildHarness
         Beast.EditorTools.NightDangerSetup.Run();
         Beast.EditorTools.MainMenuSetup.Run();
         Beast.EditorTools.EnvironmentSetup.AddRoofColliders();
+        Beast.EditorTools.ItemIconsSetup.Run();
+        Beast.EditorTools.CharacterLookSetup.Run();
+        Beast.EditorTools.AudioSetup.Run();
 
         PlayerSettings.runInBackground = true; // unattended runs must not pause when the window loses focus
         PlayerSettings.productName = "BeastHarness"; // separate save folder: never touches the real game's saves

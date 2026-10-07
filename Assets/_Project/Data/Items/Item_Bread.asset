@@ -16,7 +16,7 @@ MonoBehaviour:
   DisplayName: Bread
   Description: Dense frontier bread. Restores a little health.
   Category: 1
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: ccf1d134ed2b9144ab0faba6c222bfc8, type: 3}
   PlaceholderColor: {r: 0.85, g: 0.65, b: 0.35, a: 1}
   MaxStack: 20
   BaseValue: 5

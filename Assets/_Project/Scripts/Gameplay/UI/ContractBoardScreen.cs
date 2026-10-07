@@ -4,18 +4,19 @@ using UnityEngine;
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// Prototype contracts board UI (IMGUI): accept repeatable jobs, see their status at a glance
-    /// (badge + progress bar), track one, and turn them in here. Each contract can be done once per in-game day.
-    /// Some contracts need a standing tier with the town; they show as LOCKED with what's required.
+    /// The contracts board, on parchment: repeatable jobs as paper cards (the tracked one framed in vermilion) with a
+    /// status tag, summary, objectives and reward; Accept, Turn in and Track as brush buttons. Each contract can be done
+    /// once per in-game day. Some need a standing tier with the town and show as LOCKED with what's required.
     /// </summary>
     public sealed class ContractBoardScreen : MonoBehaviour
     {
-        const float RowHeight = 142f;
+        const float RowHeight = 168f;
 
         ContractBoard board;
         QuestLog log;
         GameStateService state;
         Vector2 scroll;
+        GUIStyle tagStyle, titleStyle, bodyStyle, centred;
 
         void OnEnable()
         {
@@ -51,21 +52,22 @@ namespace Beast.Gameplay
         {
             if (board == null || log == null || state.Current != GameState.InGameMenu) return;
             UITheme.Begin();
+            EnsureStyles();
 
-            var area = UITheme.Window(940f, 700f, board.BoardName, $"<color={UITheme.MutedHex}>New work every day</color>",
-                $"<color={UITheme.MutedHex}>Accepted contracts appear in your journal (J) and the tracker.   ·   Tab / Esc: close</color>");
-
+            var area = UITheme.ParchmentWindow(1000f, 780f, board.BoardName, "New work every day");
             var contracts = board.Contracts;
             int count = contracts?.Length ?? 0;
-            UITheme.Inset(area);
-            var view = new Rect(area.x + 4f, area.y + 4f, area.width - 8f, area.height - 8f);
-            var content = new Rect(0f, 0f, view.width - 20f, Mathf.Max(1, count) * RowHeight + 4f);
+            var view = new Rect(area.x, area.y, area.width, area.height - 52f);
+            var content = new Rect(0f, 0f, view.width - 18f, Mathf.Max(1, count) * (RowHeight + 10f));
             scroll = GUI.BeginScrollView(view, scroll, content);
             if (count == 0)
-                GUI.Label(new Rect(12f, 12f, content.width - 24f, 40f), $"<color={UITheme.MutedHex}>No work posted today.</color>", UITheme.Body);
+                GUI.Label(new Rect(4f, 4f, content.width - 8f, 40f), "No work posted today.", UITheme.PaperMuted);
             for (int i = 0; i < count; i++)
-                if (contracts[i] != null) DrawContract(new Rect(4f, 4f + i * RowHeight, content.width - 8f, RowHeight - 8f), contracts[i]);
+                if (contracts[i] != null) DrawContract(new Rect(0f, i * (RowHeight + 10f), content.width, RowHeight), contracts[i]);
             GUI.EndScrollView();
+
+            GUI.Label(new Rect(area.x, area.yMax - 34f, area.width - 220f, 30f), "Accepted contracts appear in your journal and the tracker.", UITheme.PaperMuted);
+            UITheme.KeyHints(area.xMax, area.yMax - 36f, false, ("Esc", "Leave"));
         }
 
         void DrawContract(Rect row, QuestData quest)
@@ -74,54 +76,57 @@ namespace Beast.Gameplay
             string locked = status == QuestStatus.Inactive ? log.LockReason(quest) : null;
             bool active = status is QuestStatus.Active or QuestStatus.Ready;
             bool tracked = quest == log.FocusedQuest;
-            UITheme.Slot(row, tracked, false);
+            UITheme.PaperSlot(row, tracked, false);
 
-            var (badgeText, badgeColor) = status switch
+            var (tag, tagHex) = status switch
             {
-                QuestStatus.Active => ("IN PROGRESS", UITheme.Gold),
-                QuestStatus.Ready => ("READY", UITheme.Good),
-                QuestStatus.Completed => ("DONE TODAY", UITheme.Muted),
-                _ when locked != null => ("LOCKED", UITheme.Bad),
-                _ => ("AVAILABLE", UITheme.Info),
+                QuestStatus.Active => ("In progress", UITheme.InkGoldDarkHex),
+                QuestStatus.Ready => ("Ready", UITheme.GoodOnPaperHex),
+                QuestStatus.Completed => ("Done today", UITheme.MutedOnPaperHex),
+                _ when locked != null => ("Locked", UITheme.VermilionHex),
+                _ => ("Available", UITheme.InfoOnPaperHex),
             };
-            UITheme.Badge(new Rect(row.x + 14f, row.y + 12f, 110f, 22f), badgeText, badgeColor);
-            GUI.Label(new Rect(row.x + 136f, row.y + 10f, row.width - 340f, 26f), $"<b>{quest.Title}</b>", UITheme.BodyMiddle);
-            if (tracked) UITheme.DrawIcon(new Rect(row.xMax - 196f, row.y + 16f, 14f, 14f), UITheme.DiamondIcon, UITheme.Gold);
+            float x = row.x + 22f;
+            float textWidth = row.width - 290f;
+            GUI.Label(new Rect(x, row.y + 14f, textWidth, 20f), $"<color={tagHex}>{UITheme.Spaced(tag)}</color>", tagStyle);
+            GUI.Label(new Rect(x, row.y + 36f, textWidth, 30f), quest.Title, titleStyle);
+            if (tracked) UITheme.DrawIcon(new Rect(x + titleStyle.CalcSize(new GUIContent(quest.Title)).x + 10f, row.y + 44f, 14f, 14f), UITheme.DiamondIcon, UITheme.InkGoldDark);
 
-            string details = active ? QuestText.Objectives(quest, log) : ObjectiveList(quest);
-            GUI.Label(new Rect(row.x + 14f, row.y + 42f, row.width - 220f, row.height - 46f),
-                $"<size=16><i><color={UITheme.MutedHex}>{quest.Summary}</color></i>\n{details}\n<color={UITheme.GoldHex}>Reward: {QuestText.Rewards(quest)}</color></size>",
-                UITheme.Body);
+            string details = active ? QuestText.Objectives(quest, log, UITheme.GoodOnPaperHex) : ObjectiveList(quest);
+            GUI.Label(new Rect(x, row.y + 70f, textWidth, row.height - 74f),
+                $"<i><color={UITheme.MutedOnPaperHex}>{quest.Summary}</color></i>\n{details}\n<color={UITheme.InkGoldDarkHex}>Reward: {QuestText.Rewards(quest)}</color>",
+                bodyStyle);
 
-            float bx = row.xMax - 180f;
+            var buttons = new Rect(row.xMax - 250f, row.y + 22f, 228f, row.height - 44f);
             if (active)
             {
                 var (done, total) = QuestText.Progress(quest, log);
-                UITheme.Bar(new Rect(bx, row.y + 14f, 166f, 8f), total > 0 ? done / (float)total : 0f, status == QuestStatus.Ready ? UITheme.Good : UITheme.Xp);
+                UITheme.ThinBar(new Rect(buttons.x, buttons.y, buttons.width, 5f), total > 0 ? done / (float)total : 0f,
+                    status == QuestStatus.Ready ? new Color(0.25f, 0.43f, 0.2f) : UITheme.Vermilion);
             }
 
-            var button = new Rect(bx, row.y + 34f, 166f, 38f);
-            var secondary = new Rect(bx, row.y + 78f, 166f, 32f);
+            var main = new Rect(buttons.x, buttons.y + 18f, buttons.width, 50f);
+            var secondary = new Rect(buttons.x, buttons.y + 76f, buttons.width, 44f);
             switch (status)
             {
                 case QuestStatus.Inactive when locked != null:
-                    GUI.Label(new Rect(bx - 20f, button.y, button.width + 20f, 64f), $"<color={UITheme.BadHex}>{locked}</color>", UITheme.BodyCenter);
+                    GUI.Label(new Rect(buttons.x, main.y, buttons.width, 70f), $"<color={UITheme.VermilionHex}>{locked}</color>", centred);
                     break;
                 case QuestStatus.Inactive:
-                    if (UITheme.Button(button, "Accept", log.CanStart(quest), primary: true)) log.StartQuest(quest);
+                    if (UITheme.BrushButton(main, "Accept", log.CanStart(quest))) log.StartQuest(quest);
                     break;
                 case QuestStatus.Active:
-                    GUI.Label(button, $"<color={UITheme.GoldHex}>In progress…</color>", UITheme.BodyCenter);
+                    GUI.Label(main, $"<color={UITheme.InkGoldDarkHex}>In progress…</color>", centred);
                     break;
                 case QuestStatus.Ready:
-                    if (UITheme.Button(button, "Turn in", primary: true)) log.TurnIn(quest);
+                    if (UITheme.BrushButton(main, "Turn in")) log.TurnIn(quest);
                     break;
                 case QuestStatus.Completed:
-                    GUI.Label(button, $"<color={UITheme.MutedHex}>Back tomorrow</color>", UITheme.BodyCenter);
+                    GUI.Label(main, "Back tomorrow", centred);
                     break;
             }
 
-            if (active && UITheme.Button(secondary, tracked ? "Tracking" : "Track", !tracked)) log.SetFocus(quest);
+            if (active && UITheme.BrushButton(secondary, tracked ? "Tracking" : "Track", !tracked)) log.SetFocus(quest);
         }
 
         static string ObjectiveList(QuestData quest)
@@ -131,6 +136,15 @@ namespace Beast.Gameplay
             foreach (var objective in quest.Objectives)
                 sb.Append("• ").Append(objective.Text).Append(objective.Count > 1 ? $" ×{objective.Count}" : string.Empty).Append('\n');
             return sb.ToString().TrimEnd('\n');
+        }
+
+        void EnsureStyles()
+        {
+            if (titleStyle != null && titleStyle.font == UITheme.InkHeader.font) return;
+            tagStyle = new GUIStyle(UITheme.PaperMuted) { wordWrap = false, alignment = TextAnchor.MiddleLeft, fontSize = UITheme.PaperMuted.fontSize - 2 };
+            titleStyle = new GUIStyle(UITheme.InkHeader) { fontSize = 22 };
+            bodyStyle = new GUIStyle(UITheme.PaperMuted) { normal = { textColor = UITheme.Ink } };
+            centred = new GUIStyle(UITheme.PaperBody) { alignment = TextAnchor.MiddleCenter };
         }
     }
 }

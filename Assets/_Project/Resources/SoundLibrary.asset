@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 839c1f4b0d7848f478c6a0fae70ec1eb, type: 3}
+  m_Name: SoundLibrary
+  m_EditorClassIdentifier: 
+  Swing:
+  - {fileID: 8300000, guid: 2de3af28e51c29e4499201aa24428dd1, type: 3}
+  - {fileID: 8300000, guid: 1285092fee8894f44b784a0df982ddbb, type: 3}
+  - {fileID: 8300000, guid: f3f5cd0e13ebcfa41b6d3283558c44ea, type: 3}
+  HeavySwing:
+  - {fileID: 8300000, guid: f335885c046cbe547be5b32f606d1916, type: 3}
+  - {fileID: 8300000, guid: 8a55b0f9703ca1f46b42de318debc807, type: 3}
+  Hit:
+  - {fileID: 8300000, guid: 1f8e66e83f9cf1e4f9a16279a833bbfd, type: 3}
+  - {fileID: 8300000, guid: 6040c95fcbb35af4bb888065933ece68, type: 3}
+  - {fileID: 8300000, guid: f77398cc3ad809c499ed4ff7bda76252, type: 3}
+  Block:
+  - {fileID: 8300000, guid: bf96f8b99e51ef14586eacc674f86fa8, type: 3}
+  - {fileID: 8300000, guid: 141e831085dc5014890c97dd53123f45, type: 3}
+  Parry:
+  - {fileID: 8300000, guid: f495e20684890984eb67afa6f16292d1, type: 3}
+  Death:
+  - {fileID: 8300000, guid: 085c0a00e6d71c848ae24b61339dbdb2, type: 3}
+  Dodge:
+  - {fileID: 8300000, guid: f91434c168e6c6b41a53d609ad0b220e, type: 3}
+  Footstep:
+  - {fileID: 8300000, guid: cc046649d894d2445983afffd7c23801, type: 3}
+  - {fileID: 8300000, guid: fc0e2c27b0692d84c997b3ff520c104c, type: 3}
+  - {fileID: 8300000, guid: 172ae10c77804d247be95e45daa05545, type: 3}
+  - {fileID: 8300000, guid: c0a02fdb243e80a498fceeff29823591, type: 3}
+  Climb:
+  - {fileID: 8300000, guid: 18f3de475983fcb4f90d4abbc8de035c, type: 3}
+  - {fileID: 8300000, guid: 4a6dffd50a0b76e4ea2c96b2540c8fb1, type: 3}
+  Pickup:
+  - {fileID: 8300000, guid: 50d164ebbda757b40acf59b173420fb0, type: 3}
+  Coins:
+  - {fileID: 8300000, guid: 3b67f2a27ac0c884d84234c423d201c4, type: 3}
+  Eat:
+  - {fileID: 8300000, guid: 6add1f2290e0c1e42953c17158eb6f7c, type: 3}
+  Drink:
+  - {fileID: 8300000, guid: aba649f915f579d478081d450f6c28af, type: 3}
+  Till:
+  - {fileID: 8300000, guid: f06c083fb69a5974ba2ccb1ea75f70a0, type: 3}
+  Plant:
+  - {fileID: 8300000, guid: 5c92e96bbcaff8c40b46761ebf9fd734, type: 3}
+  Water:
+  - {fileID: 8300000, guid: 4f027411c0b806246aef9fe930d6b181, type: 3}
+  Harvest:
+  - {fileID: 8300000, guid: 2d3fb39d435635742bd318f5c44329a3, type: 3}
+  QuestAccepted:
+  - {fileID: 8300000, guid: 351a5912e934c7c439ce63273aafeef1, type: 3}
+  QuestReady:
+  - {fileID: 8300000, guid: 7fe281bb121bcaa48aefcb765f9f459e, type: 3}
+  QuestComplete:
+  - {fileID: 8300000, guid: bcd89aea8bc012f4aa3dd89d1f9f2656, type: 3}
+  LevelUp:
+  - {fileID: 8300000, guid: 63f168bdf6eacbc4fabe732bd25182b0, type: 3}
+  Sleep:
+  - {fileID: 8300000, guid: 10f6cb3699b586c4c93f53f971452c01, type: 3}
+  UiClick:
+  - {fileID: 8300000, guid: 7f3f16a1d831ac94884958ee70a274f4, type: 3}
+  AmbienceDay: {fileID: 8300000, guid: 2385e4596a65a3e49b43495d154f7c44, type: 3}
+  AmbienceNight: {fileID: 8300000, guid: c63594c648b3dff40b8b8ee92f988fb3, type: 3}
+  AmbienceRain: {fileID: 8300000, guid: 15aacd94ce877354396136048420ccef, type: 3}
+  AmbienceMenu: {fileID: 8300000, guid: 16f1fd331d338d14b82819035e2acccb, type: 3}

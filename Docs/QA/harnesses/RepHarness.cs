@@ -112,8 +112,8 @@ public sealed class RepHarness : MonoBehaviour
         log.StartQuest(supply);
         Check(rep.AbandonPenaltyFor(supply) == 5, "abandon penalty is 5");
         var journal = FindFirstObjectByType<QuestJournal>();
-        state.SetState(GameState.InGameMenu);
-        SetField(journal, "isOpen", true);
+        var gameMenu = FindFirstObjectByType<GameMenu>();
+        gameMenu.Open(GameMenuTab.Journal);
         SetField(journal, "selected", supply);
         SetField(journal, "confirmAbandon", true);
         yield return Wait(0.4f);
@@ -136,16 +136,13 @@ public sealed class RepHarness : MonoBehaviour
         yield return Shot("r5_shop_standing");
         state.SetState(GameState.Playing);
 
-        state.SetState(GameState.InGameMenu);
-        SetField(journal, "isOpen", true);
+        gameMenu.Open(GameMenuTab.Journal);
         SetField(journal, "confirmAbandon", false);
         yield return Wait(0.4f);
         yield return Shot("r6_journal_standing");
         state.SetState(GameState.Playing);
 
-        var character = FindFirstObjectByType<CharacterScreen>();
-        state.SetState(GameState.InGameMenu);
-        SetField(character, "isOpen", true);
+        gameMenu.Open(GameMenuTab.Character);
         yield return Wait(0.4f);
         yield return Shot("r7_character");
         state.SetState(GameState.Playing);

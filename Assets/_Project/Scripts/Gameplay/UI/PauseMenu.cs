@@ -5,36 +5,43 @@ using UnityEngine;
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// Pause menu (Esc): Resume, Save and Load (the active save slot, with its last save time), Controls reference,
-    /// Settings (the shared SettingsPanel), Quit to main menu and Quit to desktop (both confirmed).
-    /// Prototype IMGUI on the shared UITheme.
+    /// The Options tab of the game menu — the pause (Esc), after Ghost of Tsushima's options page:
+    /// - four tiles: Controls, Display, Audio, Interface. A tile opens that category inline (Esc or ‹ returns);
+    ///   Controls also lists every key.
+    /// - brush buttons: Resume, Save game, Load last save, Quit to title, Quit to desktop (the quits ask first).
+    /// GameMenu draws the frame and runs this tab in the Paused state (saving and loading need it).
     /// </summary>
-    public sealed class PauseMenu : MonoBehaviour
+    public sealed class PauseMenu : MonoBehaviour, IGameMenuTab
     {
         static readonly (string key, string action)[] Controls =
         {
             ("WASD", "Move"), ("Mouse", "Look"), ("Shift (hold)", "Sprint"), ("Shift (tap)", "Dodge"), ("Space", "Jump"),
-            ("Space at a ledge", "Grab on (jump toward it) · Space: climb up · A/D: shimmy"), ("Space at ivy", "Climb the wall · Shift: let go"),
+            ("Space at a ledge", "Grab on · Space: climb up · A/D: shimmy"), ("Space at ivy", "Climb the wall · Shift: let go"),
             ("LMB", "Attack (hold: charged)"), ("RMB", "Block · tap just before a hit to parry"), ("MMB", "Lock on"),
             ("E / Q", "Skills"), ("X", "Swap weapon"), ("F", "Interact (hold to work a row of soil)"), ("R", "Eat / drink"),
-            ("V", "Switch seeds"), ("Tab / I", "Inventory"), ("C", "Character"), ("J", "Journal"), ("M", "Map"),
-            ("T", "Switch tracked quest"), ("Esc", "Pause / close menus"),
+            ("V", "Switch seeds"), ("Tab / I", "Bag"), ("C", "Character"), ("J", "Journal"), ("M", "Map"),
+            ("T", "Switch tracked quest"), ("Esc", "Options · close menus"), ("Q / E in menus", "Switch tab"),
         };
+
+        static readonly string[] TileBlurbs =
+        {
+            "Look speed, invert, every key",
+            "Window, resolution, shadows",
+            "Volume for each kind of sound",
+            "Size, damage numbers, shake",
+        };
+
+        enum QuitTarget { None, MainMenu, Desktop }
 
         GameStateService state;
         SaveService save;
         WorldClock clock;
         SceneLoader loader;
-        bool showControls;
         readonly SettingsPanel settingsPanel = new();
         QuitTarget confirmQuit;
         string message;
         float messageTime;
-
-        enum QuitTarget { None, MainMenu, Desktop }
-
-        void OnEnable() => EventBus<GameStateChangedEvent>.Subscribe(OnStateChanged);
-        void OnDisable() => EventBus<GameStateChangedEvent>.Unsubscribe(OnStateChanged);
+        GUIStyle tileLabel, tileBlurb, keyStyle, actionStyle, statusStyle;
 
         void Start()
         {
@@ -44,77 +51,113 @@ namespace Beast.Gameplay
             Services.TryGet(out loader);
         }
 
-        void OnStateChanged(GameStateChangedEvent evt)
+        // ---------- Game menu tab ----------
+
+        public bool CanOpen => true;
+
+        public string FooterTip
+        {
+            get
+            {
+                if (clock == null) return "Settings are shared by every save slot";
+                int slot = save != null ? save.ActiveSlot : 0;
+                return $"Slot {slot + 1}  ·  Day {clock.Day}  ·  {clock.Hour:00}:{clock.Minute:00}";
+            }
+        }
+
+        public (string key, string label)[] KeyHints => null;
+
+        /// <summary>A settings category or a quit confirm is open (Esc closes it before the menu).</summary>
+        public bool HasSubView => settingsPanel.IsOpen || confirmQuit != QuitTarget.None;
+
+        public void CloseSubView()
+        {
+            if (confirmQuit != QuitTarget.None) confirmQuit = QuitTarget.None;
+            else if (settingsPanel.IsOpen) settingsPanel.Close();
+        }
+
+        public void OnTabOpened()
         {
             if (settingsPanel.IsOpen) settingsPanel.Close();
-            if (evt.Current != GameState.Paused) return;
             confirmQuit = QuitTarget.None;
             message = null;
         }
 
-        void OnGUI()
+        /// <summary>Opens a settings category inline (0 Controls, 1 Display, 2 Audio, 3 Interface). Tests use it.</summary>
+        public void OpenCategory(int category) => settingsPanel.Open(category);
+
+        public void DrawTab(Rect content)
         {
-            if (state == null || state.Current != GameState.Paused) return;
-            UITheme.Begin(-2);
-            if (settingsPanel.IsOpen) settingsPanel.Draw();
-            state.HoldPause = settingsPanel.IsOpen; // Esc closes Settings first, then resumes
-            if (settingsPanel.IsOpen) return;
+            if (state == null) Start();
+            EnsureStyles();
+            if (settingsPanel.IsOpen) DrawCategory(content);
+            else DrawHome(content);
+        }
 
-            float width = showControls ? 900f : 420f;
-            int slot = save != null ? save.ActiveSlot : 0;
-            string subtitle = clock != null ? $"Slot {slot + 1} · Day {clock.Day} · {clock.Hour:00}:{clock.Minute:00}" : null;
-            bool hasMainMenu = loader != null && loader.HasMainMenu;
-            var area = UITheme.Window(width, hasMainMenu ? 720f : 660f, "Paused", subtitle, $"<color={UITheme.MutedHex}>Esc  resume</color>");
+        // ---------- Home: tiles and buttons ----------
 
-            float x = area.x + 10f;
-            float y = area.y + 10f;
-            const float buttonWidth = 340f;
-            const float buttonHeight = 44f;
-            const float gap = 12f;
-
-            if (UITheme.Button(new Rect(x, y, buttonWidth, buttonHeight), "Resume", primary: true)) state.SetState(GameState.Playing);
-            y += buttonHeight + gap;
-
-            if (UITheme.Button(new Rect(x, y, buttonWidth, buttonHeight), "Save game", save != null))
+        void DrawHome(Rect content)
+        {
+            const float gap = 18f;
+            float tilesWidth = Mathf.Min(content.width, 1240f);
+            float tileWidth = (tilesWidth - gap * 3f) / 4f;
+            float tileHeight = Mathf.Min(220f, content.height * 0.34f);
+            float x0 = content.center.x - tilesWidth * 0.5f;
+            for (int i = 0; i < SettingsPanel.CategoryNames.Length; i++)
             {
-                bool saved = save.Save();
-                Show(saved ? "Game saved." : "Couldn't save right now.");
+                var tile = new Rect(x0 + i * (tileWidth + gap), content.y, tileWidth, tileHeight);
+                bool hovered = tile.Contains(Event.current.mousePosition);
+                UITheme.PaperCard(tile, hovered);
+                tileLabel.normal.textColor = hovered ? UITheme.OffWhite : UITheme.Ink;
+                tileBlurb.normal.textColor = hovered ? UITheme.OffWhite : UITheme.MutedOnPaper;
+                GUI.Label(new Rect(tile.x + 22f, tile.yMax - 76f, tile.width - 44f, 34f), UITheme.Spaced(SettingsPanel.CategoryNames[i]), tileLabel);
+                GUI.Label(new Rect(tile.x + 22f, tile.yMax - 40f, tile.width - 44f, 24f), TileBlurbs[i], tileBlurb);
+                DrawTileMark(tile, i, hovered);
+                if (UITheme.PaperClick(tile)) settingsPanel.Open(i);
             }
-            y += buttonHeight + gap;
+
+            const float buttonWidth = 420f;
+            const float buttonHeight = 50f;
+            const float spacing = 14f;
+            float x = content.center.x - buttonWidth * 0.5f;
+            float y = content.y + tileHeight + 40f;
+            int slot = save != null ? save.ActiveSlot : 0;
+
+            if (UITheme.BrushButton(new Rect(x, y, buttonWidth, buttonHeight), "Resume")) state.SetState(GameState.Playing);
+            y += buttonHeight + spacing;
+
+            if (UITheme.BrushButton(new Rect(x, y, buttonWidth, buttonHeight), "Save game", save != null))
+                Show(save.Save() ? "Game saved." : "Couldn't save right now.");
+            y += buttonHeight + spacing;
 
             bool hasSave = save != null && save.HasSave(slot);
-            if (UITheme.Button(new Rect(x, y, buttonWidth, buttonHeight), "Load last save", hasSave))
+            if (UITheme.BrushButton(new Rect(x, y, buttonWidth, buttonHeight), "Load last save", hasSave))
             {
                 state.SetState(GameState.Playing); // loading is only allowed while playing or paused; resume first
                 save.Load();
             }
             DateTime? savedAt = save != null ? save.SavedAt(slot) : null;
-            GUI.Label(new Rect(x, y + buttonHeight + 2f, buttonWidth, 18f),
-                savedAt.HasValue ? $"<color={UITheme.MutedHex}>Last saved {savedAt.Value:MMM d, HH:mm}</color>" : $"<color={UITheme.MutedHex}>No save yet. Sleep in a bed or save here.</color>",
-                UITheme.Small);
-            y += buttonHeight + gap + 20f;
+            GUI.Label(new Rect(x, y + buttonHeight + 2f, buttonWidth, 22f),
+                savedAt.HasValue ? $"Last saved {savedAt.Value:MMM d, HH:mm}" : "No save yet. Sleep in a bed or save here.", statusStyle);
+            y += buttonHeight + spacing + 24f;
 
-            if (UITheme.Button(new Rect(x, y, buttonWidth, buttonHeight), showControls ? "Hide controls" : "Controls")) showControls = !showControls;
-            y += buttonHeight + gap;
-
-            if (UITheme.Button(new Rect(x, y, buttonWidth, buttonHeight), "Settings"))
+            if (loader != null && loader.HasMainMenu)
             {
-                settingsPanel.Open();
-                state.HoldPause = true;
-            }
-            y += buttonHeight + gap;
-
-            if (hasMainMenu)
-            {
-                QuitButton(new Rect(x, y, buttonWidth, buttonHeight), QuitTarget.MainMenu, "Quit to main menu");
-                y += buttonHeight + gap + (confirmQuit == QuitTarget.MainMenu ? 20f : 0f);
+                QuitButton(new Rect(x, y, buttonWidth, buttonHeight), QuitTarget.MainMenu, "Quit to title");
+                y += buttonHeight + spacing + (confirmQuit == QuitTarget.MainMenu ? 26f : 0f);
             }
             QuitButton(new Rect(x, y, buttonWidth, buttonHeight), QuitTarget.Desktop, "Quit to desktop");
+            y += buttonHeight + spacing + (confirmQuit == QuitTarget.Desktop ? 26f : 0f);
 
             if (message != null && Time.unscaledTime - messageTime < 3f)
-                GUI.Label(new Rect(x, area.yMax - 24f, buttonWidth, 22f), $"<color={UITheme.GoodHex}>{message}</color>", UITheme.Small);
+                GUI.Label(new Rect(x, y, buttonWidth, 24f), $"<color={UITheme.InkGoldDarkHex}>{message}</color>", statusStyle);
+        }
 
-            if (showControls) DrawControls(new Rect(area.x + buttonWidth + 40f, area.y, area.width - buttonWidth - 40f, area.height));
+        /// <summary>A small ink mark in the tile's top-left corner, so the four tiles read apart at a glance.</summary>
+        static void DrawTileMark(Rect tile, int index, bool hovered)
+        {
+            var icon = index switch { 0 => UITheme.DiamondIcon, 1 => UITheme.BoxIcon, 2 => UITheme.RingIcon, _ => UITheme.CircleIcon };
+            UITheme.DrawIcon(new Rect(tile.x + 22f, tile.y + 22f, 28f, 28f), icon, hovered ? UITheme.OffWhite : UITheme.Ink);
         }
 
         /// <summary>A quit button that asks first: "Unsaved progress will be lost", then Quit / Cancel.</summary>
@@ -122,32 +165,69 @@ namespace Beast.Gameplay
         {
             if (confirmQuit != target)
             {
-                if (UITheme.Button(rect, label)) confirmQuit = target;
+                if (UITheme.BrushButton(rect, label)) confirmQuit = target;
                 return;
             }
 
-            GUI.Label(new Rect(rect.x, rect.y - 2f, rect.width, 20f), $"<color={UITheme.BadHex}>{label}? Unsaved progress will be lost.</color>", UITheme.Small);
+            GUI.Label(new Rect(rect.x, rect.y - 4f, rect.width, 24f),
+                $"<color={UITheme.VermilionHex}>{label}? Unsaved progress will be lost.</color>", statusStyle);
             float half = rect.width * 0.5f - 6f;
-            if (UITheme.Button(new Rect(rect.x, rect.y + 20f, half, rect.height - 6f), "Quit"))
+            if (UITheme.BrushButton(new Rect(rect.x, rect.y + 22f, half, rect.height), "Quit"))
             {
                 confirmQuit = QuitTarget.None;
                 if (target == QuitTarget.MainMenu) loader.LoadMainMenu();
                 else Quit();
             }
-            if (UITheme.Button(new Rect(rect.x + half + 12f, rect.y + 20f, half, rect.height - 6f), "Cancel")) confirmQuit = QuitTarget.None;
+            if (UITheme.BrushButton(new Rect(rect.x + half + 12f, rect.y + 22f, half, rect.height), "Cancel")) confirmQuit = QuitTarget.None;
         }
 
-        void DrawControls(Rect area)
+        // ---------- A category, inline ----------
+
+        void DrawCategory(Rect content)
         {
-            UITheme.Inset(area);
-            GUI.Label(new Rect(area.x + 16f, area.y + 10f, area.width - 32f, 26f), "Controls", UITheme.Header);
-            float y = area.y + 44f;
+            int category = settingsPanel.Category;
+            if (UITheme.BrushButton(new Rect(content.x, content.y, 64f, 46f), "‹")) settingsPanel.Close();
+            GUI.Label(new Rect(content.x + 84f, content.y, 600f, 46f), UITheme.Spaced(SettingsPanel.CategoryNames[category]), UITheme.InkHeader);
+            UITheme.Fill(new Rect(content.x, content.y + 60f, content.width, 1f), new Color(UITheme.Ink.r, UITheme.Ink.g, UITheme.Ink.b, 0.4f));
+
+            var body = new Rect(content.x, content.y + 78f, content.width, content.height - 78f);
+            if (category == 0)
+            {
+                float leftWidth = Mathf.Min(760f, body.width * 0.52f);
+                settingsPanel.DrawCategory(new Rect(body.x, body.y, leftWidth, body.height - 70f), category);
+                DrawKeys(new Rect(body.x + leftWidth + 40f, body.y, body.width - leftWidth - 40f, body.height));
+            }
+            else
+            {
+                settingsPanel.DrawCategory(new Rect(body.x, body.y, Mathf.Min(body.width, 960f), body.height - 70f), category);
+            }
+            settingsPanel.DrawReset(new Rect(body.x, body.yMax - 50f, 320f, 50f));
+        }
+
+        void DrawKeys(Rect area)
+        {
+            UITheme.PaperCard(area, false);
+            GUI.Label(new Rect(area.x + 22f, area.y + 14f, area.width - 44f, 34f), UITheme.Spaced("Keys"), UITheme.InkHeader);
+            float y = area.y + 58f;
+            float rowHeight = Mathf.Min(28f, (area.height - 72f) / Controls.Length);
             foreach (var (key, action) in Controls)
             {
-                GUI.Label(new Rect(area.x + 16f, y, 130f, 22f), $"<color={UITheme.GoldHex}><b>{key}</b></color>", UITheme.Small);
-                GUI.Label(new Rect(area.x + 150f, y, area.width - 166f, 22f), action, UITheme.Small);
-                y += 22f;
+                GUI.Label(new Rect(area.x + 22f, y, 170f, rowHeight), key, keyStyle);
+                GUI.Label(new Rect(area.x + 196f, y, area.width - 218f, rowHeight), action, actionStyle);
+                y += rowHeight;
             }
+        }
+
+        // ---------- Helpers ----------
+
+        void EnsureStyles()
+        {
+            if (tileLabel != null && tileLabel.font == UITheme.InkHeader.font) return;
+            tileLabel = new GUIStyle(UITheme.InkHeader) { fontSize = 22 };
+            tileBlurb = new GUIStyle(UITheme.PaperMuted) { wordWrap = false };
+            keyStyle = new GUIStyle(UITheme.PaperBody) { wordWrap = false, alignment = TextAnchor.MiddleLeft, normal = { textColor = UITheme.InkGoldDark } };
+            actionStyle = new GUIStyle(UITheme.PaperBody) { wordWrap = false, alignment = TextAnchor.MiddleLeft };
+            statusStyle = new GUIStyle(UITheme.PaperMuted) { wordWrap = false, alignment = TextAnchor.MiddleCenter };
         }
 
         void Show(string text)

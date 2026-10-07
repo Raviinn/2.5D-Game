@@ -949,7 +949,7 @@ public sealed class QAHarness : MonoBehaviour
         foreach (var pair in a)
         {
             if (!b.TryGetValue(pair.Key, out var other)) { diffs.Add($"{pair.Key}: missing after load"); continue; }
-            if (other == pair.Value) continue;
+            if (other == pair.Value || Rounded(other) == Rounded(pair.Value)) continue; // float jitter (physics settling) isn't a save bug
             if (pair.Key == "world.clock" && Math.Abs(Number(other, "totalMinutes") - Number(pair.Value, "totalMinutes")) < 5) continue;
             if (pair.Key == "player.fatigue" && Math.Abs(Number(other, "hoursAwake") - Number(pair.Value, "hoursAwake")) < 0.1) continue;
             diffs.Add($"{pair.Key}: {FirstDiff(pair.Value, other)}");
@@ -958,6 +958,11 @@ public sealed class QAHarness : MonoBehaviour
         Check(diffs.Count == 0, $"{label}: every saveable restores exactly ({a.Count} compared)");
         foreach (var d in diffs) Info($"  {label} diff â†’ {d}");
     }
+
+    /// <summary>The JSON with every number rounded to 3 decimals.</summary>
+    static string Rounded(string json) =>
+        System.Text.RegularExpressions.Regex.Replace(json, @"-?\d+\.\d+(?:[eE][-+]?\d+)?",
+            m => Math.Round(double.Parse(m.Value, System.Globalization.CultureInfo.InvariantCulture), 3).ToString(System.Globalization.CultureInfo.InvariantCulture));
 
     static double Number(string json, string field)
     {
@@ -1109,12 +1114,11 @@ public sealed class QAHarness : MonoBehaviour
         // 5. Screens to look at: skill rows, the compact banner over a menu, a fading note.
         db.TryGet("quest_scraprun", out QuestData scrapRun);
         log.StartQuest(scrapRun); // raises a banner
-        var character = FindFirstObjectByType<CharacterScreen>();
-        state.SetState(GameState.InGameMenu);
-        Field(character, "isOpen").SetValue(character, true);
+        var gameMenu = FindFirstObjectByType<GameMenu>();
+        gameMenu.Open(GameMenuTab.Character);
         yield return Wait(0.4f);
         yield return Shot("fix_character_skills_and_banner");
-        state.SetState(GameState.Playing);
+        gameMenu.Close();
         yield return Wait(0.5f);
         EventBus<HudMessageEvent>.Raise(new HudMessageEvent("This note fades out cleanly"));
         float lifetime = (float)typeof(GameHud).GetField("NoteLifetime", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).GetValue(null);

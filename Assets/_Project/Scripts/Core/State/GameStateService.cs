@@ -27,8 +27,8 @@ namespace Beast.Core
         public bool BlockHotkeyClose { get; set; }
 
         /// <summary>
-        /// While true, the Resume key (Esc) doesn't unpause: set while a window inside the pause menu (Settings)
-        /// is open, so Esc closes that window instead. Reset by any state change.
+        /// While true, the Resume key (Esc) doesn't unpause or close the menu: set while a sub-view inside the game menu
+        /// (a settings category, a confirm) is open, so Esc closes that instead. Reset by any state change.
         /// </summary>
         public bool HoldPause { get; set; }
 
@@ -69,7 +69,7 @@ namespace Beast.Core
 
         void OnResumePressed(InputAction.CallbackContext _)
         {
-            if (Current == GameState.Paused && HoldPause) return;
+            if (HoldPause && Current is GameState.Paused or GameState.InGameMenu) return;
             if (Current is GameState.Paused or GameState.InGameMenu) SetState(GameState.Playing);
         }
 

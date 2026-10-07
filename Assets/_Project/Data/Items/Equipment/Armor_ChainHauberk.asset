@@ -16,7 +16,7 @@ MonoBehaviour:
   DisplayName: Chain Hauberk
   Description: Heavy mail. Worth every coin.
   Category: 4
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: c5f50183a92244f479cabbb497b520c4, type: 3}
   PlaceholderColor: {r: 0.55, g: 0.45, b: 0.35, a: 1}
   MaxStack: 1
   BaseValue: 220

@@ -28,10 +28,12 @@ namespace Beast.Core
         public int shadowQuality = ShadowsHigh;
         [Tooltip("MSAA samples: 1 (off), 2, 4 or 8.")] public int antiAliasing = 1;
 
-        [Header("Audio (applies once the game has sound)")]
+        [Header("Audio")]
         public float masterVolume = 1f;
         public float musicVolume = 0.8f;
         public float effectsVolume = 1f;
+        [Tooltip("Wind, birds, crickets, rain.")] public float ambienceVolume = 0.8f;
+        [Tooltip("Menu clicks and quest / level-up chimes.")] public float interfaceVolume = 0.8f;
 
         [Header("Interface")]
         public float uiScale = 1f;
@@ -52,6 +54,8 @@ namespace Beast.Core
             masterVolume = Mathf.Clamp01(masterVolume);
             musicVolume = Mathf.Clamp01(musicVolume);
             effectsVolume = Mathf.Clamp01(effectsVolume);
+            ambienceVolume = Mathf.Clamp01(ambienceVolume);
+            interfaceVolume = Mathf.Clamp01(interfaceVolume);
             uiScale = Mathf.Clamp(uiScale, 0.8f, 1.2f);
             cameraShake = Mathf.Clamp01(cameraShake);
         }
@@ -94,9 +98,13 @@ namespace Beast.Core
         /// <summary>Seconds left to keep a display change before it reverts, or 0 when nothing is pending.</summary>
         public float DisplayRevertSecondsLeft => revertAt < 0f ? 0f : Mathf.Max(0f, revertAt - Time.unscaledTime);
 
-        /// <summary>A volume for a category, with the master volume applied (for audio, once it exists).</summary>
-        public float MusicVolume => Current.masterVolume * Current.musicVolume;
-        public float EffectsVolume => Current.masterVolume * Current.effectsVolume;
+        /// <summary>
+        /// A category's volume WITHOUT the master volume: master is applied once, through AudioListener.volume.
+        /// </summary>
+        public float MusicVolume => Current.musicVolume;
+        public float EffectsVolume => Current.effectsVolume;
+        public float AmbienceVolume => Current.ambienceVolume;
+        public float InterfaceVolume => Current.interfaceVolume;
 
         public void Initialize()
         {

@@ -5,10 +5,14 @@ namespace Beast.Gameplay
     /// <summary>
     /// A dropped item (or gold) in the world. Pops out, hovers, then flies to the player when close.
     /// Stays put if the bag is full. Uses distance checks, so no trigger colliders or physics layers are needed.
+    /// Shows the item's icon on a card that faces the camera. Items without an icon (or a project without the
+    /// Milestone 18 assets) fall back to a coloured cube, and gold to a sphere.
     /// </summary>
     public sealed class ItemPickup : MonoBehaviour
     {
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+        static readonly int BaseMapStId = Shader.PropertyToID("_BaseMap_ST");
         static readonly Color GoldColor = new(1f, 0.82f, 0.2f);
 
         const float ScatterTime = 0.35f;
@@ -18,10 +22,15 @@ namespace Beast.Gameplay
         const float CollectRange = 0.6f;
         const float HoverHeight = 0.35f;
         const float Lifetime = 180f;
+        const float IconSize = 0.55f;
 
         static Material sharedMaterial;
+        static Material iconMaterial;
+        static Sprite goldIcon;
+        static bool iconAssetsLoaded;
         static MaterialPropertyBlock block;
         static Inventory playerInventory;
+        static Transform cameraTransform;
 
         ItemData item;
         int count;
@@ -30,9 +39,14 @@ namespace Beast.Gameplay
         Vector3 from;
         Vector3 to;
         Transform visual;
+        bool billboard;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => playerInventory = null;
+        static void ResetStatics()
+        {
+            playerInventory = null;
+            cameraTransform = null;
+        }
 
         public static void SpawnItem(Vector3 origin, ItemData item, int count, float scatterRadius) =>
             Spawn(origin, item, count, 0, scatterRadius);
@@ -58,7 +72,39 @@ namespace Beast.Gameplay
             pickup.from = origin;
             pickup.to = landing + Vector3.up * HoverHeight;
             go.transform.position = origin;
-            pickup.CreateVisual(item != null ? item.PlaceholderColor : GoldColor, isGold: item == null);
+            LoadIconAssets();
+            var icon = item != null ? item.Icon : goldIcon;
+            if (icon != null && iconMaterial != null) pickup.CreateIconVisual(icon);
+            else pickup.CreateVisual(item != null ? item.PlaceholderColor : GoldColor, isGold: item == null);
+        }
+
+        static void LoadIconAssets()
+        {
+            if (iconAssetsLoaded) return;
+            iconAssetsLoaded = true;
+            iconMaterial = Resources.Load<Material>("Pickup_Icon");
+            goldIcon = Resources.Load<Sprite>("Icons/Icon_Gold");
+        }
+
+        void CreateIconVisual(Sprite icon)
+        {
+            block ??= new MaterialPropertyBlock();
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Destroy(quad.GetComponent<Collider>());
+            visual = quad.transform;
+            visual.SetParent(transform, false);
+            visual.localScale = Vector3.one * IconSize;
+            billboard = true;
+
+            var renderer = quad.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = iconMaterial;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var texture = icon.texture;
+            var r = icon.textureRect;
+            block.Clear();
+            block.SetTexture(BaseMapId, texture);
+            block.SetVector(BaseMapStId, new Vector4(r.width / texture.width, r.height / texture.height, r.x / texture.width, r.y / texture.height));
+            renderer.SetPropertyBlock(block);
         }
 
         void CreateVisual(Color color, bool isGold)
@@ -97,7 +143,7 @@ namespace Beast.Gameplay
             }
 
             visual.localPosition = Vector3.up * (Mathf.Sin(age * 3f) * 0.08f);
-            visual.Rotate(0f, 90f * dt, 0f, Space.World);
+            if (!billboard) visual.Rotate(0f, 90f * dt, 0f, Space.World);
 
             if (age < CollectDelay) return;
             var inventory = FindPlayerInventory();
@@ -110,6 +156,17 @@ namespace Beast.Gameplay
 
             transform.position = Vector3.MoveTowards(transform.position, target, MagnetSpeed * dt);
             if (distance <= CollectRange) Collect(inventory);
+        }
+
+        void LateUpdate()
+        {
+            if (!billboard) return;
+            if (cameraTransform == null && Camera.main != null) cameraTransform = Camera.main.transform;
+            if (cameraTransform == null) return;
+            // An upright card turned to the camera, like the characters.
+            Vector3 forward = cameraTransform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude > 0.0001f) visual.rotation = Quaternion.LookRotation(forward);
         }
 
         void Collect(Inventory inventory)

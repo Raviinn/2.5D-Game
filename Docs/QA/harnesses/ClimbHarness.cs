@@ -235,8 +235,9 @@ public sealed class ClimbHarness : MonoBehaviour
             $"loading mid-hang returns to the saved spot (y {player.transform.position.y:0.00})");
 
         // ---- I: pause menu lists climbing ----
-        state.SetState(GameState.Paused);
-        SetField(FindFirstObjectByType<PauseMenu>(), "showControls", true);
+        state.SetState(GameState.Paused); // the game menu opens on Options
+        yield return null;
+        FindFirstObjectByType<PauseMenu>().OpenCategory(0); // Controls: the key list
         yield return Wait(0.4f);
         yield return Shot("c6_pause_controls");
         state.SetState(GameState.Playing);

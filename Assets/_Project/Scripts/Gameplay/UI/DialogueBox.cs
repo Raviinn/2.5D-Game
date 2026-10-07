@@ -5,13 +5,14 @@ using UnityEngine.InputSystem;
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// Prototype dialogue presentation (IMGUI): bottom box with portrait, speaker name plate, typewriter text and choices.
+    /// Dialogue presentation: an ink band across the bottom of the screen with the portrait (framed in paper), the
+    /// speaker's name in vermilion capitals, typewriter text and the choices as paper rows (the selected one red).
     /// Advance: Space / Enter / F / click / A (first press finishes the typewriter).
     /// Choices: hover + click, Up/Down + Advance, or number keys.
     /// </summary>
     public sealed class DialogueBox : MonoBehaviour
     {
-        const float ChoiceHeight = 38f;
+        const float ChoiceHeight = 42f;
 
         [SerializeField] float charactersPerSecond = 60f;
 
@@ -23,6 +24,7 @@ namespace Beast.Gameplay
         int selected;
         int hoveredChoice = -1;
         bool navHeld;
+        GUIStyle nameStyle, lineStyle, choiceStyle;
 
         void Start()
         {
@@ -109,40 +111,36 @@ namespace Beast.Gameplay
         {
             if (runner == null || !runner.IsActive) return;
             UITheme.Begin(-1);
+            EnsureStyles();
 
             int choiceCount = LineFullyShown ? runner.Choices.Count : 0;
-            float width = Mathf.Min(1100f, UITheme.Width - 48f);
-            float height = 196f + choiceCount * (ChoiceHeight + 6f);
-            var box = new Rect((UITheme.Width - width) * 0.5f, UITheme.Height - height - 28f, width, height);
+            float height = 232f + choiceCount * (ChoiceHeight + 8f);
+            // The band runs past both screen edges, so its ragged brush ends never show.
+            var band = new Rect(-60f, UITheme.Height - height, UITheme.Width + 120f, height);
+            UITheme.Fill(new Rect(0f, band.y - 60f, UITheme.Width, 60f), new Color(0f, 0f, 0f, 0.12f));
+            UITheme.Fill(new Rect(0f, band.y, UITheme.Width, height), new Color(UITheme.Ink.r, UITheme.Ink.g, UITheme.Ink.b, 0.9f));
+            UITheme.Fill(new Rect(0f, band.y, UITheme.Width, 2f), new Color(1f, 1f, 1f, 0.12f));
 
-            // Soft gradient behind the box keeps the world visible but the text readable.
-            UITheme.Fill(new Rect(0f, box.y - 40f, UITheme.Width, UITheme.Height - box.y + 40f), new Color(0f, 0f, 0f, 0.25f));
-            UITheme.Panel(box);
-
-            var portrait = new Rect(box.x + 20f, box.y + 20f, 150f, 150f);
+            float contentWidth = Mathf.Min(1180f, UITheme.Width - 80f);
+            float left = (UITheme.Width - contentWidth) * 0.5f;
+            var portrait = new Rect(left, band.y + 34f, 150f, 150f);
             DrawPortrait(portrait);
 
-            float textX = portrait.xMax + 24f;
-            float textWidth = box.xMax - textX - 24f;
+            float textX = portrait.xMax + 34f;
+            float textWidth = left + contentWidth - textX;
             bool narration = string.IsNullOrEmpty(runner.CurrentSpeakerName);
             if (!narration)
-            {
-                // Name plate sits on the box's top edge, like a tab.
-                float nameWidth = UITheme.Header.CalcSize(new GUIContent(runner.CurrentSpeakerName)).x + 36f;
-                var plate = new Rect(textX - 8f, box.y - 18f, nameWidth, 36f);
-                UITheme.Panel(plate);
-                GUI.Label(plate, runner.CurrentSpeakerName, UITheme.HeaderCenter);
-            }
+                GUI.Label(new Rect(textX, band.y + 24f, textWidth, 34f), UITheme.Spaced(runner.CurrentSpeakerName), nameStyle);
 
             string visible = runner.CurrentText.Substring(0, VisibleCharacters);
-            string text = narration ? $"<i><color={UITheme.MutedHex}>{visible}</color></i>" : visible;
-            GUI.Label(new Rect(textX, box.y + 30f, textWidth, 120f), $"<size=21>{text}</size>", UITheme.Body);
+            string text = narration ? $"<i><color={UITheme.MutedOnInkHex}>{visible}</color></i>" : visible;
+            GUI.Label(new Rect(textX, band.y + (narration ? 34f : 66f), textWidth, 110f), text, lineStyle);
 
             hoveredChoice = -1;
             var mouse = Event.current.mousePosition;
             for (int i = 0; i < choiceCount; i++)
             {
-                var rect = new Rect(textX - 8f, box.y + 168f + i * (ChoiceHeight + 6f), textWidth + 8f, ChoiceHeight);
+                var rect = new Rect(textX, band.y + 184f + i * (ChoiceHeight + 8f), Mathf.Min(textWidth, 760f), ChoiceHeight);
                 bool hovered = rect.Contains(mouse);
                 if (hovered)
                 {
@@ -150,31 +148,33 @@ namespace Beast.Gameplay
                     selected = i;
                 }
                 bool isSelected = i == selected;
-                UITheme.Slot(rect, isSelected, false);
-                var chip = new Rect(rect.x + 8f, rect.y + 7f, 24f, 24f);
-                UITheme.HudPanel(chip);
+                UITheme.PaperCard(rect, isSelected);
+                var chip = new Rect(rect.x + 10f, rect.y + 9f, 24f, 24f);
+                UITheme.KeyCap(chip);
                 GUI.Label(chip, (i + 1).ToString(), UITheme.KeyStyle);
-                GUI.Label(new Rect(rect.x + 44f, rect.y, rect.width - 52f, rect.height),
-                    isSelected ? $"<color={UITheme.GoldHex}>{runner.Choices[i]}</color>" : runner.Choices[i], UITheme.BodyMiddle);
+                choiceStyle.normal.textColor = isSelected ? UITheme.OffWhite : UITheme.Ink;
+                GUI.Label(new Rect(rect.x + 48f, rect.y, rect.width - 58f, rect.height), runner.Choices[i], choiceStyle);
             }
 
+            float hintsY = UITheme.Height - 40f;
             if (choiceCount == 0 && LineFullyShown)
             {
-                // Blinking "continue" arrow (pointing down) in the corner.
+                // Blinking "continue" arrow (pointing down) beside the hint.
                 float alpha = 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 3f));
-                var arrow = new Rect(box.xMax - 40f, box.yMax - 36f, 18f, 18f);
-                UITheme.DrawIcon(arrow, UITheme.ArrowIcon, new Color(UITheme.Gold.r, UITheme.Gold.g, UITheme.Gold.b, alpha), flipY: true);
-                GUI.Label(new Rect(box.xMax - 260f, box.yMax - 40f, 210f, 24f), $"<color={UITheme.MutedHex}>Space / F / click</color>", UITheme.SmallRight);
+                float hintsX = UITheme.KeyHints(left + contentWidth, hintsY, true, ("Space", "Continue"));
+                UITheme.DrawIcon(new Rect(hintsX - 26f, hintsY + 4f, 16f, 16f), UITheme.ArrowIcon,
+                    new Color(UITheme.InkGold.r, UITheme.InkGold.g, UITheme.InkGold.b, alpha), flipY: true);
             }
             else if (choiceCount > 0)
             {
-                GUI.Label(new Rect(box.xMax - 360f, box.yMax - 30f, 336f, 22f), $"<color={UITheme.MutedHex}>1–{choiceCount} or ↑↓ + Space · Esc leaves</color>", UITheme.SmallRight);
+                UITheme.KeyHints(left + contentWidth, hintsY, true, ($"1–{choiceCount}", "Choose"), ("Esc", "Leave"));
             }
         }
 
         void DrawPortrait(Rect rect)
         {
-            UITheme.Inset(new Rect(rect.x - 4f, rect.y - 4f, rect.width + 8f, rect.height + 8f));
+            // A paper mat around the portrait.
+            UITheme.Fill(new Rect(rect.x - 6f, rect.y - 6f, rect.width + 12f, rect.height + 12f), UITheme.Paper);
             var data = runner.CurrentSpeakerData;
             if (data != null && data.Portrait != null)
             {
@@ -185,11 +185,19 @@ namespace Beast.Gameplay
                 return;
             }
 
-            // Placeholder: coloured square with the speaker's initial (narration gets a dark box).
-            UITheme.Fill(rect, data != null ? data.PlaceholderColor : new Color(0.12f, 0.11f, 0.1f));
+            // Placeholder: the speaker's colour with their initial (narration gets an ink square).
+            UITheme.Fill(rect, data != null ? data.PlaceholderColor : new Color(0.12f, 0.12f, 0.12f));
             UITheme.Fill(new Rect(rect.x, rect.y, rect.width, rect.height * 0.4f), new Color(1f, 1f, 1f, 0.08f));
             string initial = string.IsNullOrEmpty(runner.CurrentSpeakerName) ? "…" : runner.CurrentSpeakerName.Substring(0, 1);
-            UITheme.ShadowLabel(rect, initial, UITheme.Huge, UITheme.Text);
+            UITheme.ShadowLabel(rect, initial, UITheme.Huge, UITheme.OffWhite);
+        }
+
+        void EnsureStyles()
+        {
+            if (nameStyle != null && nameStyle.font == UITheme.InkHeader.font) return;
+            nameStyle = new GUIStyle(UITheme.InkHeader) { normal = { textColor = UITheme.Vermilion } };
+            lineStyle = new GUIStyle(UITheme.InkBody) { fontSize = Mathf.RoundToInt(UITheme.InkBody.fontSize * 1.18f) };
+            choiceStyle = new GUIStyle(UITheme.PaperBody) { wordWrap = false, alignment = TextAnchor.MiddleLeft };
         }
     }
 }

@@ -9,8 +9,9 @@ namespace Beast.Gameplay
     /// - a small palette, type scale and generated frame/icon textures (no art assets needed)
     /// - shared widgets: windows, buttons, tabs, bars, badges, key hints, item icons, tooltips
     /// Swap this for the real UI (UI Toolkit) later; screens only talk to these helpers.
+    /// The light "ink and parchment" widgets and the fonts live in InkTheme.cs (the other half of this class).
     /// </summary>
-    public static class UITheme
+    public static partial class UITheme
     {
         public const float ReferenceHeight = 1080f;
 
@@ -45,7 +46,8 @@ namespace Beast.Gameplay
         static readonly Color PrimaryFill = new(0.45f, 0.33f, 0.14f, 1f);
         static readonly Color PrimaryHoverFill = new(0.58f, 0.43f, 0.18f, 1f);
         static readonly Color SelectedFill = new(0.25f, 0.19f, 0.10f, 1f);
-        static readonly Color HudFill = new(0.05f, 0.045f, 0.04f, 0.72f);
+        /// <summary>HUD over the 3D world: see-through ink (ink-and-parchment restyle, step 4).</summary>
+        static readonly Color HudFill = new(0.07f, 0.07f, 0.07f, 0.74f);
 
         // ---------- Textures ----------
 
@@ -169,6 +171,28 @@ namespace Beast.Gameplay
             return new Rect(rect.x + 20f, rect.y + 66f, rect.width - 40f, rect.height - 66f - footerSpace);
         }
 
+        /// <summary>
+        /// The dark window frame (title, optional subtitle, footer line) centred inside 'bounds' and clamped to it, with no
+        /// backdrop or close button: a screen shown as a game-menu tab before its own restyle. Returns the content area.
+        /// </summary>
+        public static Rect WindowIn(Rect bounds, float width, float height, string title, string subtitle = null, string footer = null)
+        {
+            width = Mathf.Min(width, bounds.width);
+            height = Mathf.Min(height, bounds.height);
+            var rect = new Rect(bounds.x + (bounds.width - width) * 0.5f, bounds.y + (bounds.height - height) * 0.5f, width, height);
+            Sliced(rect, panelTex);
+
+            GUI.Label(new Rect(rect.x + 24f, rect.y + 14f, rect.width - 48f, 34f), title, Title);
+            if (!string.IsNullOrEmpty(subtitle))
+                GUI.Label(new Rect(rect.x + 24f, rect.y + 16f, rect.width - 48f, 30f), subtitle, RightAligned(Body));
+            Fill(new Rect(rect.x + 20f, rect.y + 54f, rect.width - 40f, 1f), new Color(PanelBorder.r, PanelBorder.g, PanelBorder.b, 0.5f));
+            if (!string.IsNullOrEmpty(footer))
+                GUI.Label(new Rect(rect.x + 24f, rect.yMax - 34f, rect.width - 48f, 24f), footer, Small);
+
+            float footerSpace = string.IsNullOrEmpty(footer) ? 16f : 42f;
+            return new Rect(rect.x + 20f, rect.y + 66f, rect.width - 40f, rect.height - 66f - footerSpace);
+        }
+
         static GUIStyle rightAlignedCache;
         static GUIStyle RightAligned(GUIStyle source)
         {
@@ -178,31 +202,40 @@ namespace Beast.Gameplay
 
         // ---------- Widgets ----------
 
+        /// <summary>Raised when any themed button, tab, row or toggle is clicked (interface sounds listen).</summary>
+        public static event System.Action Clicked;
+
+        static bool Click(bool clicked)
+        {
+            if (clicked) Clicked?.Invoke();
+            return clicked;
+        }
+
         public static bool Button(Rect rect, string text, bool enabled = true, bool primary = false)
         {
             bool old = GUI.enabled;
             GUI.enabled = old && enabled;
             bool clicked = GUI.Button(rect, text, primary ? PrimaryButtonStyle : ButtonStyle);
             GUI.enabled = old;
-            return clicked;
+            return Click(clicked);
         }
 
         /// <summary>A selectable list row (highlighted when selected). Returns true when clicked.</summary>
         public static bool Row(Rect rect, string text, bool selected)
         {
             if (selected) Sliced(rect, selectedTex);
-            return GUI.Button(rect, text, RowStyle);
+            return Click(GUI.Button(rect, text, RowStyle));
         }
 
         public static bool Tab(Rect rect, string text, bool active)
         {
             Sliced(rect, active ? selectedTex : insetTex);
-            return GUI.Button(rect, text, TabStyle);
+            return Click(GUI.Button(rect, text, TabStyle));
         }
 
         public static bool CloseButton(Rect rect)
         {
-            bool clicked = GUI.Button(rect, GUIContent.none, ButtonStyle);
+            bool clicked = Click(GUI.Button(rect, GUIContent.none, ButtonStyle));
             var icon = new Rect(rect.center.x - 7f, rect.center.y - 7f, 14f, 14f);
             DrawIcon(icon, CrossIcon, rect.Contains(Event.current.mousePosition) ? Gold : Text);
             return clicked;
@@ -226,19 +259,30 @@ namespace Beast.Gameplay
             GUI.Label(rect, text, BadgeStyle);
         }
 
-        /// <summary>Draws a keyboard key chip ("F") followed by a label; returns the width used.</summary>
+        /// <summary>Draws a keyboard key cap ("F": an ink chip, off-white letter) followed by a label; returns the width used.</summary>
         public static float KeyHint(float x, float y, string key, string label, float alpha = 1f)
         {
             var old = GUI.color;
             GUI.color = new Color(1f, 1f, 1f, alpha);
             float keyWidth = Mathf.Max(26f, KeyStyle.CalcSize(new GUIContent(key)).x + 12f);
             var keyRect = new Rect(x, y, keyWidth, 24f);
-            Sliced(keyRect, buttonTex);
+            KeyCap(keyRect);
             GUI.Label(keyRect, key, KeyStyle);
             float labelWidth = string.IsNullOrEmpty(label) ? 0f : Small.CalcSize(new GUIContent(label)).x;
             if (labelWidth > 0f) ShadowLabel(new Rect(keyRect.xMax + 6f, y, labelWidth + 4f, 24f), label, Small, Text);
             GUI.color = old;
             return keyWidth + (labelWidth > 0f ? labelWidth + 10f : 0f) + 14f;
+        }
+
+        /// <summary>The key-cap chip behind a key letter: ink with a faint light edge.</summary>
+        public static void KeyCap(Rect rect)
+        {
+            Fill(rect, new Color(0.07f, 0.07f, 0.07f, 0.88f));
+            var edge = new Color(1f, 1f, 1f, 0.28f);
+            Fill(new Rect(rect.x, rect.y, rect.width, 1f), edge);
+            Fill(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), edge);
+            Fill(new Rect(rect.x, rect.y, 1f, rect.height), edge);
+            Fill(new Rect(rect.xMax - 1f, rect.y, 1f, rect.height), edge);
         }
 
         /// <summary>A themed horizontal slider (click or drag anywhere on it). Returns the new value.</summary>
@@ -299,7 +343,7 @@ namespace Beast.Gameplay
             if (value) DrawIcon(new Rect(box.x + 5f, box.y + 5f, 16f, 16f), CheckIcon, Gold, flipY: true); // the icon is drawn bottom-up
             if (!string.IsNullOrEmpty(label))
                 GUI.Label(new Rect(box.xMax + 10f, rect.y, rect.width - 36f, rect.height), label, BodyMiddle);
-            if (GUI.Button(rect, GUIContent.none, GUIStyle.none)) value = !value;
+            if (Click(GUI.Button(rect, GUIContent.none, GUIStyle.none))) value = !value;
             return value;
         }
 
@@ -452,6 +496,7 @@ namespace Beast.Gameplay
 
         static void Build()
         {
+            LoadFonts();
             panelTex = Frame(PanelFill, PanelBorder, 2, 6, innerGlow: true);
             insetTex = Frame(InsetFill, InsetBorder, 1, 4, innerGlow: false);
             buttonTex = Frame(ButtonFill, new Color(0.45f, 0.36f, 0.22f), 1, 4, innerGlow: true);
@@ -460,8 +505,8 @@ namespace Beast.Gameplay
             primaryTex = Frame(PrimaryFill, Gold, 1, 4, innerGlow: true);
             primaryHoverTex = Frame(PrimaryHoverFill, new Color(1f, 0.9f, 0.6f), 1, 4, innerGlow: true);
             selectedTex = Frame(SelectedFill, Gold, 1, 4, innerGlow: true);
-            hudTex = Frame(HudFill, new Color(0.42f, 0.34f, 0.2f, 0.9f), 1, 5, innerGlow: false);
-            pillTex = Frame(new Color(0.05f, 0.045f, 0.04f, 0.8f), new Color(0.5f, 0.4f, 0.22f, 0.8f), 1, 10, innerGlow: false);
+            hudTex = Frame(HudFill, new Color(1f, 1f, 1f, 0.14f), 1, 3, innerGlow: false);
+            pillTex = Frame(new Color(0.07f, 0.07f, 0.07f, 0.8f), new Color(1f, 1f, 1f, 0.12f), 1, 3, innerGlow: false);
 
             DiamondIcon = Icon((x, y) => Mathf.Abs(x) + Mathf.Abs(y) <= 0.9f, (x, y) => Mathf.Abs(x) + Mathf.Abs(y) > 0.62f);
             CircleIcon = Icon((x, y) => x * x + y * y <= 0.8f, (x, y) => x * x + y * y > 0.5f);
@@ -487,30 +532,30 @@ namespace Beast.Gameplay
                                       DistanceToSegment(x, y, 0.02f, -0.48f, -0.08f, -0.82f) < 0.08f ||
                                       DistanceToSegment(x, y, 0.46f, -0.48f, 0.36f, -0.82f) < 0.08f, null);
 
-            var font = GUI.skin.label.font;
-            Title = Label(30, FontStyle.Bold, Gold);
-            Header = Label(21, FontStyle.Bold, Gold);
+            var font = bodyFont;
+            Title = Label(32, FontStyle.Normal, Gold, displayFont);
+            Header = Label(23, FontStyle.Normal, Gold, displayFont);
             HeaderCenter = new GUIStyle(Header) { alignment = TextAnchor.MiddleCenter, wordWrap = false };
             Body = Label(17, FontStyle.Normal, Text);
             BodyCenter = new GUIStyle(Body) { alignment = TextAnchor.MiddleCenter };
             BodyMiddle = new GUIStyle(Body) { alignment = TextAnchor.MiddleLeft, wordWrap = false };
-            BodyMiddleBold = new GUIStyle(BodyMiddle) { fontStyle = FontStyle.Bold };
+            BodyMiddleBold = new GUIStyle(BodyMiddle) { font = bodyBoldFont };
             Small = Label(15, FontStyle.Normal, Text);
             Small.wordWrap = false;
             Small.alignment = TextAnchor.MiddleLeft;
             SmallCenter = new GUIStyle(Small) { alignment = TextAnchor.MiddleCenter };
             SmallRight = new GUIStyle(Small) { alignment = TextAnchor.MiddleRight };
-            Big = Label(36, FontStyle.Bold, Text);
+            Big = Label(38, FontStyle.Normal, Text, displayFont);
             Big.alignment = TextAnchor.MiddleCenter;
-            Huge = Label(56, FontStyle.Bold, Text);
+            Huge = Label(60, FontStyle.Normal, Text, displayFont);
             Huge.alignment = TextAnchor.MiddleCenter;
-            IconLabel = Label(15, FontStyle.Bold, new Color(0f, 0f, 0f, 0.55f));
+            IconLabel = Label(15, FontStyle.Normal, new Color(0f, 0f, 0f, 0.55f), bodyBoldFont);
             IconLabel.alignment = TextAnchor.MiddleCenter;
 
             ButtonStyle = new GUIStyle
             {
                 font = font,
-                fontSize = 17,
+                fontSize = Sized(font, 17),
                 alignment = TextAnchor.MiddleCenter,
                 richText = true,
                 padding = new RectOffset(10, 10, 4, 4),
@@ -523,7 +568,7 @@ namespace Beast.Gameplay
             // IMGUI shows the "normal" state for disabled controls, tinted by GUI.enabled; a flat look reads clearly as off.
             PrimaryButtonStyle = new GUIStyle(ButtonStyle)
             {
-                fontStyle = FontStyle.Bold,
+                font = bodyBoldFont,
                 normal = { background = primaryTex, textColor = new Color(1f, 0.95f, 0.85f) },
                 hover = { background = primaryHoverTex, textColor = Color.white },
                 active = { background = buttonActiveTex, textColor = Gold },
@@ -539,18 +584,22 @@ namespace Beast.Gameplay
                 focused = { background = null, textColor = Text },
             };
             TabStyle = new GUIStyle(RowStyle) { alignment = TextAnchor.MiddleCenter, wordWrap = false };
-            KeyStyle = Label(15, FontStyle.Bold, Gold);
+            KeyStyle = Label(15, FontStyle.Normal, new Color(0.95f, 0.94f, 0.91f), bodyBoldFont);
             KeyStyle.alignment = TextAnchor.MiddleCenter;
             KeyStyle.wordWrap = false;
-            BadgeStyle = Label(12, FontStyle.Bold, Color.white);
+            BadgeStyle = Label(12, FontStyle.Normal, Color.white, bodyBoldFont);
             BadgeStyle.alignment = TextAnchor.MiddleCenter;
             BadgeStyle.wordWrap = false;
             rightAlignedCache = null;
+            rightAlignedPaperMuted = null;
+            BuildInk();
         }
 
-        static GUIStyle Label(int size, FontStyle style, Color color) => new(GUI.skin.label)
+        /// <summary>A label style in the body font (or the given one). Bold faces are separate fonts, so style stays Normal.</summary>
+        static GUIStyle Label(int size, FontStyle style, Color color, Font font = null) => new(GUI.skin.label)
         {
-            fontSize = size,
+            font = font != null ? font : bodyFont,
+            fontSize = Sized(font != null ? font : bodyFont, size),
             fontStyle = style,
             richText = true,
             wordWrap = true,

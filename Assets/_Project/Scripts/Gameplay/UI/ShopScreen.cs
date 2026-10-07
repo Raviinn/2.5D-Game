@@ -5,12 +5,13 @@ using UnityEngine;
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// Prototype trade UI (IMGUI): merchant stock on the left, the player's sellable items on the right.
-    /// Opened by a Shopkeeper; the game is paused (InGameMenu) while it's open. Every trade reports what happened.
+    /// The trade window, on parchment: the merchant's stock on the left (Buy / ×5), the player's sellable items on the
+    /// right (Sell / All). Opened by a Shopkeeper; the game is paused (InGameMenu) while it's open. Every trade reports
+    /// what happened. Tab / Esc leave.
     /// </summary>
     public sealed class ShopScreen : MonoBehaviour
     {
-        const float RowHeight = 62f;
+        const float RowHeight = 78f;
         const float MessageLifetime = 3f;
 
         Shopkeeper shop;
@@ -22,6 +23,7 @@ namespace Beast.Gameplay
         string message;
         bool messageIsError;
         float messageTime;
+        GUIStyle rowName, rowDetail, footerStyle, headerRight;
 
         void OnEnable()
         {
@@ -58,46 +60,53 @@ namespace Beast.Gameplay
         {
             if (shop == null || inventory == null || state.Current != GameState.InGameMenu) return;
             UITheme.Begin();
+            EnsureStyles();
 
             var data = shop.Shop;
-            string footer = message != null && Time.unscaledTime - messageTime < MessageLifetime
-                ? $"<color={(messageIsError ? UITheme.BadHex : UITheme.GoodHex)}>{message}</color>"
-                : $"<color={UITheme.MutedHex}>Prices drop as you sell the same goods here; markets recover each day.   ·   Tab / Esc: leave</color>";
-            var area = UITheme.Window(1060f, 660f, data.MerchantName, $"<color={UITheme.GoldHex}>Your gold: {inventory.Gold}</color>{StandingText()}", footer);
+            var area = UITheme.ParchmentWindow(1160f, 760f, data.MerchantName, $"<color={UITheme.InkGoldDarkHex}>Your gold: {inventory.Gold}</color>{StandingText()}");
 
+            float top = area.y;
             if (!string.IsNullOrEmpty(data.Greeting))
-                GUI.Label(new Rect(area.x + 4f, area.y, area.width - 8f, 24f), $"<i><color={UITheme.MutedHex}>“{data.Greeting}”</color></i>", UITheme.Body);
+            {
+                GUI.Label(new Rect(area.x, top, area.width, 26f), $"<i>“{data.Greeting}”</i>", UITheme.PaperMuted);
+                top += 36f;
+            }
 
-            float top = area.y + 34f;
-            float columnWidth = (area.width - 20f) * 0.5f;
-            DrawBuyColumn(new Rect(area.x, top, columnWidth, area.yMax - top));
-            DrawSellColumn(new Rect(area.x + columnWidth + 20f, top, columnWidth, area.yMax - top));
+            float footer = 56f;
+            float columnWidth = (area.width - 32f) * 0.5f;
+            DrawBuyColumn(new Rect(area.x, top, columnWidth, area.yMax - top - footer));
+            DrawSellColumn(new Rect(area.x + columnWidth + 32f, top, columnWidth, area.yMax - top - footer));
+
+            string line = message != null && Time.unscaledTime - messageTime < MessageLifetime
+                ? $"<color={(messageIsError ? UITheme.VermilionHex : UITheme.GoodOnPaperHex)}>{message}</color>"
+                : "Prices drop as you sell the same goods here; markets recover each day.";
+            GUI.Label(new Rect(area.x, area.yMax - 34f, area.width - 220f, 30f), line, footerStyle);
+            UITheme.KeyHints(area.xMax, area.yMax - 36f, false, ("Esc", "Leave"));
         }
 
         void DrawBuyColumn(Rect area)
         {
-            GUI.Label(new Rect(area.x, area.y, area.width, 26f), "Buy", UITheme.Header);
-            var view = new Rect(area.x, area.y + 30f, area.width, area.height - 30f);
-            UITheme.Inset(view);
-            var content = new Rect(0f, 0f, view.width - 20f, Mathf.Max(1, shop.StockCount) * RowHeight + 8f);
-            buyScroll = GUI.BeginScrollView(new Rect(view.x + 4f, view.y + 4f, view.width - 8f, view.height - 8f), buyScroll, content);
+            GUI.Label(new Rect(area.x, area.y, area.width, 34f), UITheme.Spaced("Buy"), UITheme.InkHeader);
+            var view = new Rect(area.x, area.y + 44f, area.width, area.height - 44f);
+            var content = new Rect(0f, 0f, view.width - 18f, Mathf.Max(1, shop.StockCount) * (RowHeight + 8f));
+            buyScroll = GUI.BeginScrollView(view, buyScroll, content);
 
             for (int i = 0; i < shop.StockCount; i++)
             {
                 var item = shop.StockItem(i);
                 if (item == null) continue;
-                var row = new Rect(4f, 4f + i * RowHeight, content.width - 8f, RowHeight - 6f);
+                var row = new Rect(0f, i * (RowHeight + 8f), content.width, RowHeight);
                 int left = shop.StockLeft(i);
                 int price = shop.BuyPrice(item);
                 bool affordable = inventory.Gold >= price;
-                string stockText = shop.IsUnlimited(i) ? "plenty" : left > 0 ? $"{left} left today" : $"<color={UITheme.BadHex}>sold out</color>";
-                string priceText = $"<color={(affordable ? UITheme.GoldHex : UITheme.BadHex)}>{price}g</color>";
+                string stockText = shop.IsUnlimited(i) ? "plenty" : left > 0 ? $"{left} left today" : $"<color={UITheme.VermilionHex}>sold out</color>";
+                string priceText = $"<color={(affordable ? UITheme.InkGoldDarkHex : UITheme.VermilionHex)}>{price}g</color>";
 
-                DrawRowItem(row, item, $"<b>{item.DisplayName}</b>\n<size=15>{priceText}  <color={UITheme.MutedHex}>·  {stockText}  ·  you have {inventory.CountOf(item)}</color></size>");
+                DrawRowItem(row, item, item.DisplayName, $"{priceText}  ·  {stockText}  ·  you have {inventory.CountOf(item)}");
 
                 bool canBuy = left > 0 && affordable;
-                if (UITheme.Button(new Rect(row.xMax - 132f, row.y + 12f, 64f, 32f), "Buy", canBuy, primary: true)) Buy(i, 1);
-                if (UITheme.Button(new Rect(row.xMax - 62f, row.y + 12f, 56f, 32f), "×5", canBuy)) Buy(i, 5);
+                if (UITheme.BrushButton(new Rect(row.xMax - 196f, row.y + 16f, 110f, 46f), "Buy", canBuy)) Buy(i, 1);
+                if (UITheme.BrushButton(new Rect(row.xMax - 78f, row.y + 16f, 66f, 46f), "×5", canBuy)) Buy(i, 5);
             }
             GUI.EndScrollView();
         }
@@ -120,7 +129,7 @@ namespace Beast.Gameplay
 
         void DrawSellColumn(Rect area)
         {
-            GUI.Label(new Rect(area.x, area.y, area.width, 26f), "Sell", UITheme.Header);
+            GUI.Label(new Rect(area.x, area.y, area.width, 34f), UITheme.Spaced("Sell"), UITheme.InkHeader);
 
             // Distinct items the merchant will buy, in bag order.
             sellable.Clear();
@@ -130,26 +139,26 @@ namespace Beast.Gameplay
                 if (!stack.IsEmpty && shop.Buys(stack.Item) && !sellable.Contains(stack.Item)) sellable.Add(stack.Item);
             }
 
-            var view = new Rect(area.x, area.y + 30f, area.width, area.height - 30f);
-            UITheme.Inset(view);
-            var content = new Rect(0f, 0f, view.width - 20f, Mathf.Max(1, sellable.Count) * RowHeight + 8f);
-            sellScroll = GUI.BeginScrollView(new Rect(view.x + 4f, view.y + 4f, view.width - 8f, view.height - 8f), sellScroll, content);
+            var view = new Rect(area.x, area.y + 44f, area.width, area.height - 44f);
+            var content = new Rect(0f, 0f, view.width - 18f, Mathf.Max(1, sellable.Count) * (RowHeight + 8f));
+            sellScroll = GUI.BeginScrollView(view, sellScroll, content);
 
             if (sellable.Count == 0)
-                GUI.Label(new Rect(12f, 12f, content.width - 24f, 48f), $"<color={UITheme.MutedHex}>You have nothing this merchant wants.</color>", UITheme.Body);
+                GUI.Label(new Rect(4f, 4f, content.width - 8f, 48f), "You have nothing this merchant wants.", UITheme.PaperMuted);
 
             for (int i = 0; i < sellable.Count; i++)
             {
                 var item = sellable[i];
-                var row = new Rect(4f, 4f + i * RowHeight, content.width - 8f, RowHeight - 6f);
+                var row = new Rect(0f, i * (RowHeight + 8f), content.width, RowHeight);
                 int count = inventory.CountOf(item);
                 float demand = shop.Demand(item);
-                string market = demand < 0.95f ? $"  ·  <color={UITheme.BadHex}>market {Mathf.RoundToInt(demand * 100f)}%</color>" : string.Empty;
+                string market = demand < 0.95f ? $"  ·  <color={UITheme.VermilionHex}>market {Mathf.RoundToInt(demand * 100f)}%</color>" : string.Empty;
 
-                DrawRowItem(row, item, $"<b>{item.DisplayName}</b>  <color={UITheme.MutedHex}>×{count}</color>\n<size=15><color={UITheme.GoldHex}>{shop.SellPrice(item)}g</color> each{market}</size>");
+                DrawRowItem(row, item, $"{item.DisplayName}  <color={UITheme.MutedOnPaperHex}>×{count}</color>",
+                    $"<color={UITheme.InkGoldDarkHex}>{shop.SellPrice(item)}g</color> each{market}");
 
-                if (UITheme.Button(new Rect(row.xMax - 132f, row.y + 12f, 64f, 32f), "Sell")) Sell(item, 1);
-                if (UITheme.Button(new Rect(row.xMax - 62f, row.y + 12f, 56f, 32f), "All")) Sell(item, count);
+                if (UITheme.BrushButton(new Rect(row.xMax - 196f, row.y + 16f, 110f, 46f), "Sell")) Sell(item, 1);
+                if (UITheme.BrushButton(new Rect(row.xMax - 78f, row.y + 16f, 66f, 46f), "All")) Sell(item, count);
             }
             GUI.EndScrollView();
         }
@@ -161,11 +170,12 @@ namespace Beast.Gameplay
             else Show("They won't buy that.", true);
         }
 
-        static void DrawRowItem(Rect row, ItemData item, string text)
+        void DrawRowItem(Rect row, ItemData item, string name, string detail)
         {
-            UITheme.Slot(row, false, row.Contains(Event.current.mousePosition));
-            UITheme.ItemIcon(new Rect(row.x + 10f, row.y + 10f, 36f, 36f), item);
-            GUI.Label(new Rect(row.x + 58f, row.y + 6f, row.width - 200f, row.height - 8f), text, UITheme.Body);
+            UITheme.PaperSlot(row, false, row.Contains(Event.current.mousePosition));
+            UITheme.ItemIcon(new Rect(row.x + 14f, row.y + 14f, 50f, 50f), item);
+            GUI.Label(new Rect(row.x + 78f, row.y + 12f, row.width - 290f, 28f), name, rowName);
+            GUI.Label(new Rect(row.x + 78f, row.y + 42f, row.width - 290f, 24f), detail, rowDetail);
         }
 
         /// <summary>"   ·   Standing: Trusted (10% better prices)" — why prices are what they are.</summary>
@@ -173,8 +183,8 @@ namespace Beast.Gameplay
         {
             if (!Services.TryGet(out Reputation reputation) || !reputation.IsConfigured) return string.Empty;
             int bonus = reputation.PriceBonusPercent;
-            string effect = bonus > 0 ? $"<color={UITheme.GoodHex}>{bonus}% better prices</color>" : "standard prices";
-            return $"<color={UITheme.MutedHex}>   ·   Standing: <b>{reputation.TierName}</b> ({effect})</color>";
+            string effect = bonus > 0 ? $"<color={UITheme.GoodOnPaperHex}>{bonus}% better prices</color>" : "standard prices";
+            return $"   ·   {reputation.TierName} ({effect})";
         }
 
         void Show(string text, bool error)
@@ -182,6 +192,15 @@ namespace Beast.Gameplay
             message = text;
             messageIsError = error;
             messageTime = Time.unscaledTime;
+        }
+
+        void EnsureStyles()
+        {
+            if (rowName != null && rowName.font == UITheme.PaperBody.font) return;
+            rowName = new GUIStyle(UITheme.PaperBody) { wordWrap = false, alignment = TextAnchor.MiddleLeft };
+            rowDetail = new GUIStyle(UITheme.PaperMuted) { wordWrap = false, alignment = TextAnchor.MiddleLeft };
+            footerStyle = new GUIStyle(UITheme.PaperMuted) { wordWrap = false, alignment = TextAnchor.MiddleLeft };
+            headerRight = new GUIStyle(UITheme.PaperMuted) { wordWrap = false, alignment = TextAnchor.MiddleRight };
         }
     }
 }

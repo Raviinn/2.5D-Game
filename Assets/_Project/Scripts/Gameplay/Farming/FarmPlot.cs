@@ -117,9 +117,11 @@ namespace Beast.Gameplay
             if (index < 0) return;
 
             ref var tile = ref tiles[index];
+            FarmAction? done = null;
             if (!tile.Tilled)
             {
                 tile.Tilled = true;
+                done = FarmAction.Till;
             }
             else if (tile.Crop == null)
             {
@@ -131,22 +133,26 @@ namespace Beast.Gameplay
                 else if (!interactor.Inventory.Remove(seed, 1))
                     return;
                 tile = new Tile { Tilled = true, Crop = crop };
+                done = FarmAction.Plant;
             }
             else if (tile.Dead)
             {
                 tile.Crop = null;
                 tile.Dead = false;
+                done = FarmAction.Clear;
             }
             else if (IsRipe(tile))
             {
-                Harvest(ref tile, interactor.Inventory);
+                if (Harvest(ref tile, interactor.Inventory)) done = FarmAction.Harvest;
             }
             else if (!tile.Watered)
             {
                 tile.Watered = true;
+                done = FarmAction.Water;
             }
             if (tile.Tilled && IsRaining) tile.Watered = true; // soil worked in the rain is already wet
             RefreshTile(index);
+            if (done.HasValue) EventBus<FarmActionEvent>.Raise(new FarmActionEvent(done.Value, TileWorldCenter(index)));
         }
 
         void Describe(int index, PlayerInteractor interactor, out string text, out bool canInteract, out string action)
@@ -197,7 +203,8 @@ namespace Beast.Gameplay
             }
         }
 
-        void Harvest(ref Tile tile, Inventory inventory)
+        /// <summary>False when the bag had no room at all (nothing was picked).</summary>
+        bool Harvest(ref Tile tile, Inventory inventory)
         {
             var crop = tile.Crop;
             int amount = Random.Range(crop.ProduceMin, Mathf.Max(crop.ProduceMin, crop.ProduceMax) + 1);
@@ -206,7 +213,7 @@ namespace Beast.Gameplay
             if (leftover == amount)
             {
                 EventBus<HudMessageEvent>.Raise(new HudMessageEvent("Bag is full"));
-                return;
+                return false;
             }
             // Partly full bag: what didn't fit drops at the player's feet instead of vanishing.
             if (leftover > 0) ItemPickup.SpawnItem(inventory.transform.position, crop.Produce, leftover, 0.8f);
@@ -222,6 +229,7 @@ namespace Beast.Gameplay
                 tile.Crop = null;
                 tile.Growth = 0;
             }
+            return true;
         }
 
         // ---------- Daily growth ----------

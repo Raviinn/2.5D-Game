@@ -6,12 +6,12 @@ using UnityEngine.Rendering.Universal;
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// Top-right minimap (M toggles a large map). A top-down orthographic camera renders the world
+    /// Top-right minimap; the large map is the Map tab of the game menu (M). A top-down orthographic camera renders the world
     /// (characters excluded) into a small texture; markers are drawn on top: player arrow, enemies,
     /// NPCs with quest markers, the contracts board, the bed, north, and the tracked quest's target
     /// (pinned to the edge when it's off the map). The map rotates with the camera, like Genshin's.
     /// </summary>
-    public sealed class Minimap : MonoBehaviour
+    public sealed class Minimap : MonoBehaviour, IGameMenuTab
     {
         [SerializeField, Min(64)] int resolution = 256;
         [SerializeField, Tooltip("World metres shown across the minimap.")] float smallWorldSize = 45f;
@@ -30,8 +30,7 @@ namespace Beast.Gameplay
         Transform mainCamera;
         QuestTracker tracker;
         GameStateService state;
-        InputAction mapAction;
-        bool large;
+        bool large; // true while the Map tab is showing
         Rect mapRect;
 
         void Start()
@@ -41,7 +40,6 @@ namespace Beast.Gameplay
             if (Camera.main != null) mainCamera = Camera.main.transform;
             tracker = FindFirstObjectByType<QuestTracker>();
             state = Services.Get<GameStateService>();
-            mapAction = Services.Get<InputService>().Map;
             CreateCamera();
         }
 
@@ -88,17 +86,14 @@ namespace Beast.Gameplay
             Destroy(texture);
         }
 
-        void Update()
-        {
-            if (mapAction.WasPressedThisFrame() && state.Current == GameState.Playing) large = !large;
-        }
-
         void LateUpdate()
         {
             if (mapCamera == null || player == null) return;
 
-            // Only render while playing (menus and dialogue cover the screen anyway).
-            mapCamera.enabled = state.Current == GameState.Playing;
+            // The Map tab only shows while its menu is open; otherwise it's the corner minimap.
+            if (large && (menu == null || !menu.IsOpen || menu.ActiveTab != GameMenuTab.Map)) large = false;
+            // Render while playing, or under the Map tab (other menus and dialogue cover the screen anyway).
+            mapCamera.enabled = state.Current == GameState.Playing || large;
             mapCamera.orthographicSize = (large ? largeWorldSize : smallWorldSize) * 0.5f;
             float yaw = mainCamera != null ? mainCamera.eulerAngles.y : 0f;
             mapCamera.transform.SetPositionAndRotation(player.position + Vector3.up * EffectiveHeight, Quaternion.Euler(90f, yaw, 0f));
@@ -112,38 +107,50 @@ namespace Beast.Gameplay
             ? Mathf.Clamp(RenderSettings.fogStartDistance - 4f, 18f, cameraHeight)
             : cameraHeight;
 
+        GameMenu menu;
+
+        // ---------- Game menu tab ----------
+
+        public bool CanOpen => mapCamera != null && player != null;
+        public string FooterTip => "The <color=#c9a86a>gold diamond</color> marks your tracked quest";
+        public (string key, string label)[] KeyHints => null;
+        public bool HasSubView => false;
+        public void CloseSubView() { }
+
+        public void OnTabOpened()
+        {
+            menu ??= FindFirstObjectByType<GameMenu>();
+            large = true;
+            LateUpdate(); // frame the large map now, before the first draw
+        }
+
+        public void DrawTab(Rect bounds)
+        {
+            if (!CanOpen) return;
+            large = true;
+            float size = Mathf.Min(bounds.height - 50f, 780f);
+            mapRect = new Rect(bounds.center.x - size * 0.5f, bounds.y, size, size);
+            UITheme.Fill(new Rect(mapRect.x - 2f, mapRect.y - 2f, mapRect.width + 4f, mapRect.height + 4f), UITheme.Ink);
+            GUI.DrawTexture(mapRect, texture);
+            DrawMarkers();
+            DrawPlayerArrow();
+            DrawLegend(new Rect(mapRect.x, mapRect.yMax + 14f, mapRect.width, 24f));
+        }
+
         void OnGUI()
         {
             if (mapCamera == null || player == null || state.Current != GameState.Playing) return;
             UITheme.Begin();
 
-            if (large)
-            {
-                UITheme.Backdrop(0.45f);
-                float size = Mathf.Min(UITheme.Height - 160f, 760f);
-                mapRect = new Rect((UITheme.Width - size) * 0.5f, (UITheme.Height - size) * 0.5f, size, size);
-            }
-            else
-            {
-                float size = GameHud.MinimapSize;
-                mapRect = new Rect(UITheme.Width - size - GameHud.MinimapMargin, GameHud.MinimapMargin, size, size);
-            }
-
-            UITheme.Panel(new Rect(mapRect.x - 6f, mapRect.y - 6f, mapRect.width + 12f, mapRect.height + 12f));
+            float size = GameHud.MinimapSize;
+            mapRect = new Rect(UITheme.Width - size - GameHud.MinimapMargin, GameHud.MinimapMargin, size, size);
+            UITheme.Fill(new Rect(mapRect.x - 3f, mapRect.y - 3f, mapRect.width + 6f, mapRect.height + 6f), new Color(0.07f, 0.07f, 0.07f, 0.85f));
+            UITheme.Fill(new Rect(mapRect.x - 3f, mapRect.y - 3f, mapRect.width + 6f, 1f), new Color(1f, 1f, 1f, 0.14f));
             GUI.DrawTexture(mapRect, texture);
 
             DrawMarkers();
             DrawPlayerArrow();
-
-            if (large)
-            {
-                GUI.Label(new Rect(mapRect.x, mapRect.y - 44f, mapRect.width, 34f), "Map", UITheme.Title);
-                DrawLegend(new Rect(mapRect.x, mapRect.yMax + 14f, mapRect.width, 24f));
-            }
-            else
-            {
-                UITheme.KeyHint(mapRect.x + 4f, mapRect.yMax - 28f, "M", "Map", 0.8f);
-            }
+            UITheme.KeyHint(mapRect.x + 4f, mapRect.yMax - 28f, "M", "Map", 0.8f);
         }
 
         void DrawLegend(Rect row)
@@ -154,15 +161,14 @@ namespace Beast.Gameplay
             x = LegendEntry(x, row.y, UITheme.CircleIcon, NpcColor, "People");
             x = LegendEntry(x, row.y, UITheme.CircleIcon, EnemyColor, "Enemies");
             x = LegendEntry(x, row.y, UITheme.BoxIcon, BoardColor, "Contracts");
-            x = LegendEntry(x, row.y, UITheme.BoxIcon, BedColor, "Bed");
-            UITheme.KeyHint(Mathf.Max(x, row.xMax - 120f), row.y, "M", "Close", 0.9f);
+            LegendEntry(x, row.y, UITheme.BoxIcon, BedColor, "Bed");
         }
 
         static float LegendEntry(float x, float y, Texture2D icon, Color color, string label)
         {
             UITheme.DrawIcon(new Rect(x, y + 5f, 14f, 14f), icon, color);
-            float width = UITheme.Small.CalcSize(new GUIContent(label)).x;
-            UITheme.ShadowLabel(new Rect(x + 20f, y, width + 4f, 24f), label, UITheme.Small, UITheme.Text);
+            float width = UITheme.PaperMuted.CalcSize(new GUIContent(label)).x;
+            GUI.Label(new Rect(x + 20f, y, width + 4f, 24f), label, UITheme.PaperMuted);
             return x + width + 40f;
         }
 

@@ -162,18 +162,18 @@ namespace Beast.Gameplay
             float y = GameHud.TrackerTop;
             float textWidth = PanelWidth - 40f;
 
-            string ready = log.IsReady(focused) ? $"\n<color={UITheme.GoodHex}>Return to {focused.TurnInAt}</color>" : string.Empty;
+            string ready = log.IsReady(focused) ? $"\n<color={UITheme.GoodOnInkHex}>Return to {focused.TurnInAt}</color>" : string.Empty;
             string target = HasTarget
-                ? $"\n<color={UITheme.GoldHex}>{TargetLabel}</color> <color={UITheme.MutedHex}>· {Vector3.Distance(player.position, TargetPosition):0} m</color>"
+                ? $"\n<color={UITheme.InkGoldHex}>{TargetLabel}</color> <color={UITheme.MutedOnInkHex}>· {Vector3.Distance(player.position, TargetPosition):0} m</color>"
                 : string.Empty;
-            string body = $"<size=15>{QuestText.Objectives(focused, log)}{ready}{target}</size>";
-            string title = $"<b><color={QuestText.TypeColor(focused.Type)}>{focused.Title}</color></b>";
+            string body = $"<size=15>{QuestText.Objectives(focused, log, UITheme.GoodOnInkHex)}{ready}{target}</size>";
+            string title = $"<color={QuestText.TypeColorOnInk(focused.Type)}>{focused.Title}</color>";
             float titleHeight = UITheme.Body.CalcHeight(new GUIContent(title), textWidth);
             float bodyHeight = UITheme.Body.CalcHeight(new GUIContent(body), textWidth);
 
             var box = new Rect(x, y, PanelWidth, titleHeight + bodyHeight + 22f);
             UITheme.HudPanel(box);
-            UITheme.DrawIcon(new Rect(x + 10f, y + 12f, 14f, 14f), UITheme.DiamondIcon, UITheme.Gold);
+            UITheme.DrawIcon(new Rect(x + 10f, y + 12f, 14f, 14f), UITheme.DiamondIcon, UITheme.InkGold);
             GUI.Label(new Rect(x + 30f, y + 8f, textWidth, titleHeight), title, UITheme.Body);
             GUI.Label(new Rect(x + 30f, y + 12f + titleHeight, textWidth, bodyHeight), body, UITheme.Body);
             y += box.height + 6f;
@@ -184,13 +184,13 @@ namespace Beast.Gameplay
                 if (quest != focused) others.Add(quest);
             for (int i = 0; i < others.Count && i < MaxOtherQuests; i++)
             {
-                string status = log.IsReady(others[i]) ? $" <color={UITheme.GoodHex}>(ready)</color>" : string.Empty;
-                UITheme.ShadowLabel(new Rect(x + 12f, y, PanelWidth - 20f, 20f), $"<color={UITheme.MutedHex}>{others[i].Title}</color>{status}", UITheme.Small, Color.white);
+                string status = log.IsReady(others[i]) ? $" <color={UITheme.GoodOnInkHex}>(ready)</color>" : string.Empty;
+                UITheme.ShadowLabel(new Rect(x + 12f, y, PanelWidth - 20f, 20f), $"<color={UITheme.MutedOnInkHex}>{others[i].Title}</color>{status}", UITheme.Small, Color.white);
                 y += 20f;
             }
             if (others.Count > MaxOtherQuests)
             {
-                UITheme.ShadowLabel(new Rect(x + 12f, y, PanelWidth - 20f, 20f), $"<color={UITheme.MutedHex}>+{others.Count - MaxOtherQuests} more</color>", UITheme.Small, Color.white);
+                UITheme.ShadowLabel(new Rect(x + 12f, y, PanelWidth - 20f, 20f), $"<color={UITheme.MutedOnInkHex}>+{others.Count - MaxOtherQuests} more</color>", UITheme.Small, Color.white);
                 y += 20f;
             }
 
@@ -227,7 +227,7 @@ namespace Beast.Gameplay
             float pulse = offScreen ? 1f : 1f + 0.06f * Mathf.Sin(Time.unscaledTime * 4f);
             float size = 26f * pulse;
             UITheme.DrawIcon(new Rect(point.x - size * 0.5f + 1.5f, point.y - size * 0.5f + 1.5f, size, size), UITheme.DiamondIcon, new Color(0f, 0f, 0f, 0.6f));
-            UITheme.DrawIcon(new Rect(point.x - size * 0.5f, point.y - size * 0.5f, size, size), UITheme.DiamondIcon, new Color(UITheme.Gold.r, UITheme.Gold.g, UITheme.Gold.b, offScreen ? 0.85f : 1f));
+            UITheme.DrawIcon(new Rect(point.x - size * 0.5f, point.y - size * 0.5f, size, size), UITheme.DiamondIcon, new Color(UITheme.InkGold.r, UITheme.InkGold.g, UITheme.InkGold.b, offScreen ? 0.85f : 1f));
             UITheme.ShadowLabel(new Rect(point.x - 80f, point.y + 14f, 160f, 20f), $"{distance:0} m", UITheme.SmallCenter, UITheme.Text);
         }
 
@@ -247,6 +247,8 @@ namespace Beast.Gameplay
             }
         }
 
+        GameMenu gameMenu;
+
         void DrawBanner()
         {
             float age = Time.unscaledTime - bannerStart;
@@ -255,23 +257,29 @@ namespace Beast.Gameplay
             float alpha = age < 0.2f ? age / 0.2f : age > bannerLength - 0.6f ? (bannerLength - age) / 0.6f : 1f;
             if (state.Current == GameState.InGameMenu)
             {
-                // Over a menu: a slim one-line strip at the very top, so it never sits over the window itself.
-                var strip = new Rect(0f, 0f, UITheme.Width, 30f);
-                UITheme.Fill(strip, new Color(0f, 0f, 0f, 0.6f * alpha));
+                // Over a menu: a slim one-line strip at the very top (under the game menu's tab bar), never over the content.
+                if (gameMenu == null) gameMenu = FindFirstObjectByType<GameMenu>();
+                float top = gameMenu != null && gameMenu.IsOpen ? 64f : 0f;
+                var strip = new Rect(0f, top, UITheme.Width, 30f);
+                UITheme.Fill(strip, new Color(0.07f, 0.07f, 0.07f, 0.85f * alpha));
                 UITheme.Fill(new Rect(0f, strip.yMax - 2f, UITheme.Width, 2f), new Color(bannerColor.r, bannerColor.g, bannerColor.b, 0.7f * alpha));
                 string hex = ColorUtility.ToHtmlStringRGB(bannerColor);
                 UITheme.ShadowLabel(strip, $"<b><color=#{hex}>{bannerTitle}</color></b>   {bannerSubtitle}", UITheme.SmallCenter, new Color(1f, 1f, 1f, alpha));
                 return;
             }
-            var band = new Rect(0f, 96f, UITheme.Width, 84f);
-            UITheme.Fill(band, new Color(0f, 0f, 0f, 0.55f * alpha));
-            var line = new Color(bannerColor.r, bannerColor.g, bannerColor.b, 0.8f * alpha);
-            float lineWidth = Mathf.Min(520f, UITheme.Width * 0.4f);
-            UITheme.Fill(new Rect((UITheme.Width - lineWidth) * 0.5f, band.y + 2f, lineWidth, 2f), line);
+            var band = new Rect(0f, 96f, UITheme.Width, 92f);
+            UITheme.Fill(band, new Color(0.07f, 0.07f, 0.07f, 0.6f * alpha));
+            var line = new Color(bannerColor.r, bannerColor.g, bannerColor.b, 0.85f * alpha);
+            float lineWidth = Mathf.Min(560f, UITheme.Width * 0.4f);
             UITheme.Fill(new Rect((UITheme.Width - lineWidth) * 0.5f, band.yMax - 4f, lineWidth, 2f), line);
-            UITheme.ShadowLabel(new Rect(0f, band.y + 8f, UITheme.Width, 40f), bannerTitle, UITheme.Big,
+            var titleStyle = UITheme.DisplayTitle;
+            int size = titleStyle.fontSize;
+            titleStyle.fontSize = 34;
+            UITheme.ShadowLabel(new Rect(0f, band.y + 8f, UITheme.Width, 44f), UITheme.Spaced(bannerTitle), titleStyle,
+                new Color(UITheme.OffWhite.r, UITheme.OffWhite.g, UITheme.OffWhite.b, alpha));
+            titleStyle.fontSize = size;
+            UITheme.ShadowLabel(new Rect(0f, band.y + 54f, UITheme.Width, 26f), bannerSubtitle, UITheme.BodyCenter,
                 new Color(bannerColor.r, bannerColor.g, bannerColor.b, alpha));
-            UITheme.ShadowLabel(new Rect(0f, band.y + 50f, UITheme.Width, 26f), bannerSubtitle, UITheme.BodyCenter, new Color(1f, 1f, 1f, alpha));
         }
     }
 }

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: knight_greatsword
   DisplayName: Greatsword
+  Look: 1
   LightCombo:
   - {fileID: 11400000, guid: af0c7569b07f5d644a2005dccd30aa4e, type: 2}
   - {fileID: 11400000, guid: 43cd1bdc71cc0e04fa45b2cde1bb343e, type: 2}

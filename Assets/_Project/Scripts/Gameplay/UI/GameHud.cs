@@ -106,9 +106,9 @@ namespace Beast.Gameplay
 
         // ---------- Notifications ----------
 
-        void OnItemsAdded(ItemsAddedEvent evt) => AddNote($"+{evt.Count}  {evt.Item.DisplayName}", UITheme.Text);
-        void OnItemUsed(ItemUsedEvent evt) => AddNote($"Used {evt.Item.DisplayName}", UITheme.Muted);
-        void OnHudMessage(HudMessageEvent evt) => AddNote(evt.Text, UITheme.Gold);
+        void OnItemsAdded(ItemsAddedEvent evt) => AddNote($"+{evt.Count}  {evt.Item.DisplayName}", UITheme.OffWhite);
+        void OnItemUsed(ItemUsedEvent evt) => AddNote($"Used {evt.Item.DisplayName}", UITheme.MutedOnInk);
+        void OnHudMessage(HudMessageEvent evt) => AddNote(evt.Text, UITheme.Vermilion);
         void OnXpGained(XpGainedEvent evt) => AddNote($"+{evt.Amount} {evt.Discipline} XP", UITheme.Xp);
 
         void OnReputationChanged(ReputationChangedEvent evt) =>
@@ -163,27 +163,37 @@ namespace Beast.Gameplay
             float y = UITheme.Height - 78f;
 
             if (combat != null && combat.Class != null && combat.Moveset != null)
-                UITheme.ShadowLabel(new Rect(x, y - 24f, width, 20f),
-                    $"{combat.Class.DisplayName}  <color={UITheme.MutedHex}>·  {combat.Moveset.DisplayName}</color>", UITheme.Small, UITheme.Text);
+                UITheme.ShadowLabel(new Rect(x, y - 26f, width, 22f),
+                    $"{UITheme.Spaced(combat.Class.DisplayName)}   <color={UITheme.MutedOnInkHex}>{combat.Moveset.DisplayName}</color>", UITheme.Small, UITheme.OffWhite);
             if (fatigue != null && fatigue.Level != FatigueLevel.Rested)
             {
                 bool exhausted = fatigue.Level == FatigueLevel.Exhausted;
-                UITheme.Badge(new Rect(x + width - 104f, y - 24f, 104f, 20f), exhausted ? "EXHAUSTED" : "TIRED", exhausted ? UITheme.Bad : UITheme.Gold);
+                UITheme.ShadowLabel(new Rect(x, y + 36f, width, 22f), UITheme.Spaced(exhausted ? "Exhausted" : "Tired"), UITheme.SmallCenter,
+                    exhausted ? UITheme.Vermilion : UITheme.InkGold);
             }
 
+            // Thin bars on an ink track (Tsushima-style): health in vermilion, stamina and poise below it.
             float hp = combatant.MaxHealth > 0f ? combatant.Health / combatant.MaxHealth : 0f;
-            var hpRect = new Rect(x, y, width, 20f);
-            // Low health: the frame pulses red so it's noticed without looking at numbers.
+            var hpRect = new Rect(x, y + 4f, width, 10f);
+            // Low health: the track pulses red so it's noticed without looking at numbers.
             if (hp < 0.3f && !combatant.IsDead)
             {
                 float pulse = 0.35f + 0.35f * Mathf.Sin(Time.unscaledTime * 6f);
-                UITheme.Fill(new Rect(hpRect.x - 3f, hpRect.y - 3f, hpRect.width + 6f, hpRect.height + 6f), new Color(UITheme.Health.r, 0.1f, 0.1f, pulse));
+                UITheme.Fill(new Rect(hpRect.x - 3f, hpRect.y - 3f, hpRect.width + 6f, hpRect.height + 6f), new Color(UITheme.Vermilion.r, 0.12f, 0.12f, pulse));
             }
-            UITheme.Bar(hpRect, hp, UITheme.Health, $"{combatant.Health:0} / {combatant.MaxHealth:0}");
+            HudBar(hpRect, hp, UITheme.Vermilion);
+            UITheme.ShadowLabel(new Rect(x, y - 26f, width, 22f), $"{combatant.Health:0} / {combatant.MaxHealth:0}", UITheme.SmallRight, UITheme.OffWhite);
             if (stamina != null)
-                UITheme.Bar(new Rect(x, y + 24f, width, 9f), stamina.Max > 0f ? stamina.Current / stamina.Max : 0f, UITheme.StaminaColor);
-            UITheme.Bar(new Rect(x + width * 0.25f, y + 37f, width * 0.5f, 5f),
+                HudBar(new Rect(x, y + 20f, width, 5f), stamina.Max > 0f ? stamina.Current / stamina.Max : 0f, new Color(0.62f, 0.78f, 0.52f));
+            HudBar(new Rect(x + width * 0.25f, y + 31f, width * 0.5f, 3f),
                 combatant.MaxPoise > 0f ? combatant.Poise / combatant.MaxPoise : 0f, UITheme.PoiseColor);
+        }
+
+        /// <summary>A HUD bar: see-through ink track, solid fill, no frame.</summary>
+        static void HudBar(Rect rect, float fill, Color color)
+        {
+            UITheme.Fill(new Rect(rect.x - 1f, rect.y - 1f, rect.width + 2f, rect.height + 2f), new Color(0.07f, 0.07f, 0.07f, 0.7f));
+            UITheme.Fill(new Rect(rect.x, rect.y, rect.width * Mathf.Clamp01(fill), rect.height), color);
         }
 
         void DrawActionSlots()
@@ -226,12 +236,12 @@ namespace Beast.Gameplay
                 UITheme.ShadowLabel(rect, $"<b>{cooldownLeft:0.0}</b>", UITheme.BodyCenter, UITheme.Text);
             }
 
-            // Key chip in the corner, caption underneath.
+            // Key cap in the corner, caption underneath.
             var keyRect = new Rect(rect.x - 6f, rect.y - 8f, 24f, 22f);
-            UITheme.HudPanel(keyRect);
+            UITheme.KeyCap(keyRect);
             GUI.Label(keyRect, key, UITheme.KeyStyle);
             var captionRect = new Rect(rect.x - SlotGap * 0.5f + 1f, rect.yMax + 3f, rect.width + SlotGap - 2f, 20f);
-            UITheme.ShadowLabel(captionRect, UITheme.Fit(caption, UITheme.SmallCenter, captionRect.width), UITheme.SmallCenter, empty ? UITheme.Muted : UITheme.Text);
+            UITheme.ShadowLabel(captionRect, UITheme.Fit(caption, UITheme.SmallCenter, captionRect.width), UITheme.SmallCenter, empty ? UITheme.MutedOnInk : UITheme.OffWhite);
         }
 
         static string Initials(string name)
@@ -305,9 +315,9 @@ namespace Beast.Gameplay
             bool night = dayNight != null && dayNight.IsNight;
             var current = weather != null ? weather.Current : Weather.Clear;
             if (current == Weather.Rain) UITheme.DrawIcon(rect, UITheme.RainIcon, UITheme.Info);
-            else if (current == Weather.Cloudy) UITheme.DrawIcon(rect, UITheme.CloudIcon, UITheme.Muted);
+            else if (current == Weather.Cloudy) UITheme.DrawIcon(rect, UITheme.CloudIcon, UITheme.MutedOnInk);
             else if (night) UITheme.DrawIcon(rect, UITheme.MoonIcon, new Color(0.8f, 0.86f, 1f));
-            else UITheme.DrawIcon(rect, UITheme.SunIcon, UITheme.Gold);
+            else UITheme.DrawIcon(rect, UITheme.SunIcon, UITheme.InkGold);
         }
 
         void DrawClock()
@@ -320,7 +330,7 @@ namespace Beast.Gameplay
             DrawSkyIcon(new Rect(rect.x + 120f, rect.y + 6f, 18f, 18f));
             if (inventory != null)
             {
-                UITheme.DrawIcon(new Rect(rect.xMax - 76f, rect.y + 8f, 14f, 14f), UITheme.CoinIcon, UITheme.Gold);
+                UITheme.DrawIcon(new Rect(rect.xMax - 76f, rect.y + 8f, 14f, 14f), UITheme.CoinIcon, UITheme.InkGold);
                 GUI.Label(new Rect(rect.xMax - 58f, rect.y, 50f, rect.height), $"<b>{inventory.Gold}</b>", UITheme.Small);
             }
         }
@@ -374,7 +384,7 @@ namespace Beast.Gameplay
         {
             if (combat == null || !combat.IsDead) return;
             UITheme.Fill(new Rect(0f, 0f, UITheme.Width, UITheme.Height), new Color(0.25f, 0f, 0f, 0.45f));
-            UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.38f, UITheme.Width, 70f), "DEFEATED", UITheme.Huge, UITheme.Bad);
+            UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.38f, UITheme.Width, 70f), UITheme.Spaced("Defeated"), UITheme.Huge, UITheme.Vermilion);
             UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.38f + 72f, UITheme.Width, 30f),
                 $"You stagger back to safety… {combat.RespawnTimeLeft:0.0}s", UITheme.BodyCenter, UITheme.Text);
         }
@@ -386,7 +396,7 @@ namespace Beast.Gameplay
             float alpha = age < SleepHold ? 1f : 1f - (age - SleepHold) / SleepFade;
             UITheme.Fill(new Rect(0f, 0f, UITheme.Width, UITheme.Height), new Color(0f, 0f, 0f, alpha));
             var color = new Color(UITheme.Text.r, UITheme.Text.g, UITheme.Text.b, alpha);
-            UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.42f, UITheme.Width, 60f), $"Day {sleepDay}", UITheme.Huge, color);
+            UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.42f, UITheme.Width, 60f), UITheme.Spaced($"Day {sleepDay}"), UITheme.Huge, color);
             UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.42f + 62f, UITheme.Width, 30f),
                 $"{Period(sleepHour)}, {sleepHour:00}:00 · You feel rested{(sleepSaved ? " · Game saved" : string.Empty)}", UITheme.BodyCenter, color);
         }

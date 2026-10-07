@@ -11,6 +11,12 @@ namespace Beast.Gameplay
     public sealed class MovesetData : GameData
     {
         public string DisplayName = "New Style";
+        [Tooltip("How the player is drawn while using this style.")]
+        public WeaponLook Look;
+
+        /// <summary>Look, except that an older asset left on the default whose name says Greatsword counts as one.</summary>
+        public WeaponLook ResolvedLook =>
+            Look == WeaponLook.SwordAndShield && DisplayName != null && DisplayName.Contains("Greatsword") ? WeaponLook.Greatsword : Look;
 
         [Header("Attacks")]
         public AttackData[] LightCombo;

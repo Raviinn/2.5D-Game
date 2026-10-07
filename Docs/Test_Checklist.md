@@ -1,4 +1,4 @@
-# Full Test Checklist — Milestones 1 → 17 (+ QA fixes)
+# Full Test Checklist — Milestones 1 → 21 (+ QA fixes)
 
 **Build under test:** Unity project `Beast`, everything through Milestone 4e (Dialogue & Quests), plus the polish pass (new UI theme, HUD, pause menu, environment art — setup menu "Milestone 9") light reputation (setup menu "Milestone 10") climbing & ledges (setup menu "Milestone 11") per-pixel sprite shadows (setup menu "Milestone 12") smarter enemies (setup menu "Milestone 13") day/night & weather (setup menu "Milestone 14") night danger & fatigue (setup menu "Milestone 15") and the main menu & save slots (setup menu "Milestone 16").
 **Format:** each line is **Action → Expected result**. Tick it only if the expected result happens **and the Console shows no new red errors or yellow warnings**.
@@ -510,7 +510,7 @@ Go to the dark 6×6 field southeast of the spawn.
 - [ ] **Controls:** drag **Mouse sensitivity** to about 2× → in the world the camera turns noticeably faster. **Invert vertical look** On → moving the mouse up looks down.
 - [ ] **Display:** **Shadows Off** → shadows disappear (and characters no longer darken in shade); **High** brings them back. **Render scale 50%** → the world gets blurry, the UI stays sharp. Turn **VSync** off → **Frame rate limit** becomes clickable.
 - [ ] **Interface:** **Interface size 120%** → every menu and the HUD get bigger; 80% smaller. **Damage numbers Off** → hitting the dummy shows no numbers (a parry still shows PARRY!). **Camera shake** to Off → heavy hits no longer shake the camera.
-- [ ] **Audio:** the sliders move and save (there's no sound yet).
+- [ ] **Audio:** the sliders move and save (what they do: see 13p).
 - [ ] **Esc** in the world → **Settings** → **Esc** goes back to the pause menu (not straight into the game); **Esc** again resumes.
 - [ ] Stop Play, press Play again → all your settings are still as you left them. They're the same in every save slot.
 - [ ] **Reset to defaults** → asks first → **Reset** puts everything back (window mode and resolution stay).
@@ -532,6 +532,110 @@ Go to the dark 6×6 field southeast of the spawn.
 - [ ] Bread's details say "Restores 30 health." (no "0 stamina").
 - [ ] With a Healroot already in your bag, talk to Brenna about the ash → she completes Roots of the Blight in the same conversation.
 - [ ] Build Settings (File → Build Profiles) lists Bootstrap, MainMenu, World_Test only.
+
+---
+
+## 13n. Item Icons (Milestone 18)
+
+**Setup:** run **Beast → Setup → Run Milestone 18 Setup (Item Icons)**.
+
+- [ ] Open the bag (**I**) → every item has a little picture instead of a coloured square with a letter (bread loaf, red flask, turnip, seed pouches, swords, helmet...).
+- [ ] The shop, the character screen's gear slots and the quick-item slot on the HUD show the same pictures.
+- [ ] Kill a bandit or hit the dummy → the dropped loot shows its picture on a small card that always faces you (gold is a coin stack), bobbing; it still flies to you when you're close.
+- [ ] Give an item your own sprite in its **Icon** field and re-run the setup → your sprite is kept.
+
+## 13o. Character Creator & Weapon Looks (Milestone 19)
+
+**Setup:** run **Beast → Setup → Run Milestone 19 Setup (Character Look)**. Press Play in **Bootstrap**.
+
+- [ ] **New Game** → pick a slot → the **Create your hero** screen: a preview of your character idling, with **Hair**, **Hair colour**, **Skin**, **Outfit**.
+- [ ] Change each option → the preview changes at once. **<** / **>** turn the preview; **Preview with: Greatsword** shows the two-handed sword and no shield.
+- [ ] **Randomise** → a random look. **Back** / **Esc** → back to the slot list.
+- [ ] **Begin your journey** → in the world your character has the look you picked.
+- [ ] Open the character screen and equip a **greatsword** → your character now holds a long two-handed blade and has no shield. Equip a **sword & shield** (or swap weapons with the weapon-swap key) → the shield is back.
+- [ ] Attack with each → the strike animation shows the right weapon.
+- [ ] Save, quit to the menu, **Continue** → same look. Start a new game in another slot with a different look → each slot keeps its own.
+
+## 13p. Sound (Milestone 20)
+
+**Setup:** run **Beast → Setup → Run Milestone 20 Setup (Sound)**. Turn your speakers on.
+
+- [ ] Title screen: a quiet wind. Clicking buttons makes a soft tick.
+- [ ] In the world by day: wind and birds. Wait until night (or sleep past 21:00) → crickets instead. Rainy day → rain on top.
+- [ ] Run → footsteps. Attack → a swoosh (deeper with the greatsword). Hit the dummy → a thud; block a bandit → a clang; parry → a ring. Dodge → a whoosh. A bandit dies → a heavier thump.
+- [ ] Pick up loot → a blip; gold → coins. Eat bread → crunching; drink a draught → gulps.
+- [ ] Farm: till, plant, water and harvest each have their own sound.
+- [ ] Accept a quest, finish one, level up, sleep → a short chime for each.
+- [ ] **Settings → Audio:** **Sound effects** to 0 → swings and hits go silent; **Ambience** to 0 → wind, birds and rain fade out; **Interface sounds** to 0 → no clicks or chimes; **Master** lowers everything.
+- [ ] Bandits far away are quiet or silent; close ones are louder and come from their side.
+
+## 13q. UI Restyle (Milestone 21)
+
+**Step 1 — theme, fonts, title screen.** No setup. Press Play in **Bootstrap**.
+
+- [ ] Title screen: a dark stormy sky with slowly drifting clouds and falling ash, the hills in front, and **B E A S T** in wide capitals at the upper right.
+- [ ] The menu is a plain list on the left. Moving the mouse over an item puts a white brush swash behind it (dark text on the swash). **Up / Down** (or W / S) move it too; **Enter** chooses.
+- [ ] With no saves, **Load Game** is greyed out and can't be chosen; with a save, **Continue** is first and the line under the list names the slot, day and play time.
+- [ ] **New Game** → a parchment window with the three slots as paper cards and black brush buttons. Hovering a button turns it red.
+- [ ] **Start here** → the character creator on parchment: the preview on a black stage; swatches with a red frame on the chosen one; Sword & Shield / Greatsword as cards, the chosen one red.
+- [ ] Bottom right shows **[Esc] Back** on these pages; Esc goes back.
+- [ ] Everywhere (menus and HUD) the text is in the new fonts and nothing is cut off.
+
+**Step 2 — the game menu.**
+
+- [ ] **Esc** in the world → a parchment screen with a black bar along the top: **Q · MAP · JOURNAL · BAG · CHARACTER · OPTIONS · E**, with Renown and gold on the right. **Options** is highlighted (parchment block, dark text). The world behind is hidden and paused.
+- [ ] Options shows four tiles (Controls, Display, Audio, Interface; hovering one turns it red) and black brush buttons: Resume, Save game, Load last save (with the last save time under it), Quit to title, Quit to desktop.
+- [ ] Click **Audio** → the volume sliders appear in place, with a ‹ button and the title AUDIO. Drag a slider (red fill, black handle). **Esc** goes back to the tiles (the menu stays open); **Esc** again closes the menu.
+- [ ] **Controls** tile → sensitivity rows on the left, every key listed on a paper card on the right.
+- [ ] **Quit to title** asks first (red text, Quit / Cancel); **Esc** cancels the question without closing the menu.
+- [ ] In the world press **C** → the menu opens on Character. **E** moves one tab right (Options), **E** again wraps to Map, **Q** goes back. Clicking a tab name switches too.
+- [ ] Inside the menu, **J** jumps to Journal; **J** again closes the menu. Same for **Tab / I** (Bag) and **M** (Map).
+- [ ] **M** in the world → the Map tab: the map, framed, with the legend under it; time is frozen. The corner minimap is unchanged while playing.
+
+**Step 3 — the tabs' content.**
+
+- [ ] **Bag:**
+  - Category cards on the left (All, Food, Materials, Seeds & crops, Gear) show their counts. Picking one shows only those items; All shows every slot, empty ones too.
+  - Hovering a slot shows a dark tooltip. Clicking it frames it in red and fills the black panel on the right: big icon, name, details, **Use** or **Equip**.
+  - Right-click still uses or equips straight away.
+- [ ] **Character → Combat:**
+  - Skills are diamonds in rows by tier, joined by lines. A gold rim means learned, black means learnable now, grey means locked.
+  - Clicking one turns its rim red and shows it in the black panel.
+  - **Learn** works when you have a point. A learned active skill has **Set E / Set Q**, and its diamond then shows E or Q.
+- [ ] **Character → Farming:** the same for the farming skills.
+- [ ] **Character → Gear:**
+  - Your own character (your chosen look) stands in the middle, idling.
+  - Weapons and the accessory are on the left; head, body and legs are on the right. The weapon in hand says "in hand".
+  - Clicking a slot shows it in the black panel with **Unequip**, the spare gear in your bag that fits it (each with **Equip**), and all your stats.
+- [ ] **Journal:**
+  - Filter cards with counts, and your standing with the town at the bottom left.
+  - Quests are paper rows; the tracked one has a gold diamond, and the selected one is red.
+  - The black panel shows the summary, objectives (done ones in green), reward and where to go, with **Track this quest** and **Abandon** (side quests and contracts only).
+  - Abandon asks first; **Esc** cancels the question without closing the menu.
+
+**Step 4 — pop-ups and HUD.**
+
+- [ ] **Shop** (talk to the merchant):
+  - A parchment window with the merchant's name in spaced capitals, your gold and your standing.
+  - Buy and Sell columns of paper rows, with **Buy / ×5** and **Sell / All** brush buttons. Prices you can't afford are red.
+  - A trade message shows at the bottom. **Esc** leaves.
+- [ ] **Contract board:**
+  - Contracts are paper cards with a small status line (Available, In progress, Ready, Done today, Locked), the summary, objectives and reward.
+  - **Accept / Turn in / Track** buttons. The tracked contract has a red frame.
+- [ ] **Dialogue:**
+  - A dark band across the bottom of the screen, with the portrait on a paper mat and the speaker's name in red capitals.
+  - Answer choices are paper rows with number keys; the selected one is red.
+  - **[Space] Continue** shows bottom right.
+- [ ] **HUD:**
+  - Thin red health bar with the numbers above it, and thin stamina and poise bars under it. KNIGHT and your fighting style show above the bar.
+  - Action slots and key caps are dark and see-through.
+  - The clock and gold sit on a dark panel under the minimap, which has a thin dark frame.
+  - Pickup notices show on dark pills.
+- [ ] Accept a quest → the banner is a dark band with the quest title in spaced capitals and a coloured line under it.
+- [ ] Stay up past midnight (Tired) → "T I R E D" shows under the bars.
+- [ ] Get defeated → "D E F E A T E D" in red. Sleep → "D A Y  N" fades in and out.
+- [ ] A quest banner while the menu is open shows as a slim strip just under the black bar.
+- [ ] Title screen → **Settings** → a parchment window with the four categories as cards along the top, Reset to defaults and Back as brush buttons.
 
 ---
 

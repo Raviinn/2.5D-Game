@@ -16,7 +16,7 @@ MonoBehaviour:
   DisplayName: Rusted Sword & Shield
   Description: Battered army issue. Still better than nothing.
   Category: 4
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: 6818ef464a3251d469db1d632a7f5e7a, type: 3}
   PlaceholderColor: {r: 0.75, g: 0.75, b: 0.8, a: 1}
   MaxStack: 1
   BaseValue: 20

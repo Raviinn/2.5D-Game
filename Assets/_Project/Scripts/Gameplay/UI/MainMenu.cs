@@ -1,22 +1,28 @@
 using System;
+using System.Collections.Generic;
 using Beast.Core;
 using UnityEngine;
 
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// Title screen: Continue (the most recent save), New Game (pick one of the save slots; an occupied slot asks
-    /// before it's overwritten), Load Game (each slot shows its day, time, play time and a few details; slots can
-    /// be deleted, after a confirm), Settings (the shared SettingsPanel) and Quit. The backdrop is a dusk sky drawn in code until real art exists.
-    /// Prototype IMGUI on the shared UITheme; lives in the MainMenu scene (Milestone 16 setup).
+    /// Title screen, in the ink-and-parchment style (UI restyle step 1).
+    /// - Home: a stormy sky with drifting clouds and falling ash, "BEAST" in spaced capitals, and a plain list on the left:
+    ///   Continue (the most recent save), New Game, Load Game, Settings, Quit. The highlighted item sits on a white brush
+    ///   swash; the mouse or Up / Down (W / S) move it, Enter / Space chooses.
+    /// - New Game: pick a slot (an occupied one asks before it's overwritten), then the character creator
+    ///   (hair, hair colour, skin tone, outfit). Load Game: each slot's day, time, play time and details; delete after a confirm.
+    ///   Both are parchment windows over the storm.
+    /// - Settings: the shared SettingsPanel.
+    /// Lives in the MainMenu scene (Milestone 16 setup).
     /// </summary>
     public sealed class MainMenu : MonoBehaviour
     {
-        enum Page { Home, NewGame, LoadGame }
+        enum Page { Home, NewGame, LoadGame, Create }
         enum Confirm { None, Overwrite, Delete }
 
-        const float ButtonWidth = 360f;
-        const float ButtonHeight = 50f;
+        static readonly string[] WeaponNames = { "Sword & Shield", "Greatsword" };
+        const float ItemSpacing = 56f;
 
         readonly SlotInfo[] slots = new SlotInfo[SaveService.SlotCount];
         int continueSlot = -1;
@@ -27,18 +33,36 @@ namespace Beast.Gameplay
         int confirmSlot = -1;
         string busyText;
         string error;
+        /// <summary>The home item on the swash (kept when the mouse leaves the list, like a console menu).</summary>
+        int highlighted;
 
         readonly SettingsPanel settingsPanel = new();
+
+        // Character creator
+        int createSlot = -1;
+        CharacterAppearance look = new();
+        WeaponLook previewWeapon;
+        int previewDirection;
+        Texture2D previewSheet;
+        CharacterAppearance previewAppearance;
+        WeaponLook previewSheetWeapon;
 
         GameStateService state;
         SaveService save;
         SceneLoader loader;
 
-        Texture2D sky;
-        Texture2D farHills;
-        Texture2D nearHills;
-        Vector3[] stars;
-        GUIStyle titleStyle;
+        // Storm backdrop
+        Texture2D sky, clouds, farHills, nearHills;
+        Vector4[] ash;
+        GUIStyle menuItemOnSwash, subtitleStyle, centredInkBody, paperLabel, slotTitle;
+
+        readonly struct HomeItem
+        {
+            public readonly string Label;
+            public readonly bool Enabled;
+            public readonly Action Choose;
+            public HomeItem(string label, bool enabled, Action choose) { Label = label; Enabled = enabled; Choose = choose; }
+        }
 
         void Awake()
         {
@@ -57,9 +81,8 @@ namespace Beast.Gameplay
 
         void OnDestroy()
         {
-            if (sky != null) Destroy(sky);
-            if (farHills != null) Destroy(farHills);
-            if (nearHills != null) Destroy(nearHills);
+            foreach (var tex in new[] { sky, clouds, farHills, nearHills, previewSheet })
+                if (tex != null) Destroy(tex);
         }
 
         /// <summary>Re-reads every slot from disk.</summary>
@@ -96,15 +119,20 @@ namespace Beast.Gameplay
             Refresh();
         }
 
-        public async void StartNewGame(int slot)
+        /// <summary>Starts a new game in the slot with the default look (skips the character creator).</summary>
+        public void StartNewGame(int slot) => StartNewGame(slot, new CharacterAppearance());
+
+        public async void StartNewGame(int slot, CharacterAppearance appearance)
         {
             if (busyText != null || save == null || loader == null) return;
             busyText = "Starting a new game…";
             error = null;
+            PlayerAppearance.Pending = (appearance ?? new CharacterAppearance()).Clone();
             bool ok = false;
             try { ok = await save.NewGameAsync(slot, loader.FirstScene); }
             catch (Exception e) { Debug.LogException(e); }
             if (ok || this == null) return;
+            PlayerAppearance.Pending = null;
             busyText = null;
             error = "Couldn't start a new game.";
             Refresh();
@@ -126,6 +154,19 @@ namespace Beast.Gameplay
 #endif
         }
 
+        /// <summary>Opens the character creator for a new game in this slot (fresh default look).</summary>
+        public void OpenCreator(int slot)
+        {
+            createSlot = slot;
+            look = new CharacterAppearance();
+            previewWeapon = WeaponLook.SwordAndShield;
+            previewDirection = 0;
+            Open(Page.Create);
+        }
+
+        /// <summary>Test hook: the look being edited in the creator.</summary>
+        public CharacterAppearance CreatorLook => look;
+
         void Open(Page next)
         {
             page = next;
@@ -134,18 +175,30 @@ namespace Beast.Gameplay
             Refresh();
         }
 
+        List<HomeItem> HomeItems()
+        {
+            var items = new List<HomeItem>(5);
+            if (continueSlot >= 0) items.Add(new HomeItem("Continue", true, Continue));
+            items.Add(new HomeItem("New Game", true, () => Open(Page.NewGame)));
+            items.Add(new HomeItem("Load Game", anySave, () => Open(Page.LoadGame)));
+            items.Add(new HomeItem("Settings", true, settingsPanel.Open));
+            items.Add(new HomeItem("Quit", true, Quit));
+            return items;
+        }
+
         // ---------- Drawing ----------
 
         void OnGUI()
         {
             if (state == null || state.Current is not (GameState.MainMenu or GameState.Loading)) return;
             UITheme.Begin(-5);
+            EnsureStyles();
             DrawBackdrop();
             if (!settingsPanel.IsOpen) DrawTitle();
 
             if (busyText != null || state.Current == GameState.Loading)
             {
-                GUI.Label(new Rect(0f, UITheme.Height * 0.6f, UITheme.Width, 40f), busyText ?? "Loading…", UITheme.HeaderCenter);
+                GUI.Label(new Rect(0f, UITheme.Height * 0.62f, UITheme.Width, 40f), UITheme.Spaced(busyText ?? "Loading…"), centredInkBody);
                 return;
             }
 
@@ -158,103 +211,162 @@ namespace Beast.Gameplay
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape && page != Page.Home)
             {
                 if (confirm != Confirm.None) confirm = Confirm.None;
-                else Open(Page.Home);
+                else Open(page == Page.Create ? Page.NewGame : Page.Home);
                 Event.current.Use();
             }
 
             if (page == Page.Home) DrawHome();
+            else if (page == Page.Create) DrawCreator();
             else DrawSlots();
 
             if (error != null)
-                GUI.Label(new Rect(0f, UITheme.Height - 120f, UITheme.Width, 24f), $"<color={UITheme.BadHex}>{error}</color>", UITheme.SmallCenter);
-            GUI.Label(new Rect(20f, UITheme.Height - 34f, 400f, 22f), $"<color={UITheme.MutedHex}>Beast · prototype v{Application.version}</color>", UITheme.Small);
+                GUI.Label(new Rect(0f, UITheme.Height - 96f, UITheme.Width, 26f), $"<color={UITheme.VermilionHex}>{error}</color>", centredInkBody);
+            var oldColor = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, 0.5f);
+            GUI.Label(new Rect(32f, UITheme.Height - 46f, 400f, 26f), $"Beast · prototype v{Application.version}", UITheme.InkSmall);
+            GUI.color = oldColor;
+            if (page != Page.Home) UITheme.KeyHints(UITheme.Width - 40f, UITheme.Height - 76f, true, ("Esc", "Back"));
+        }
+
+        void EnsureStyles()
+        {
+            if (menuItemOnSwash != null && menuItemOnSwash.font == UITheme.MenuItem.font) return;
+            menuItemOnSwash = new GUIStyle(UITheme.MenuItem) { normal = { textColor = UITheme.Ink } };
+            subtitleStyle = new GUIStyle(UITheme.InkSmall) { alignment = TextAnchor.MiddleCenter, fontSize = 18 };
+            centredInkBody = new GUIStyle(UITheme.InkBody) { alignment = TextAnchor.MiddleCenter, wordWrap = false };
+            paperLabel = new GUIStyle(UITheme.PaperBody) { alignment = TextAnchor.MiddleLeft, wordWrap = false };
+            slotTitle = new GUIStyle(UITheme.InkHeader) { fontSize = 22 };
         }
 
         void DrawTitle()
         {
-            titleStyle ??= new GUIStyle(UITheme.Huge) { fontSize = 120, alignment = TextAnchor.MiddleCenter };
-            float y = page == Page.Home ? 150f : 70f;
-            UITheme.ShadowLabel(new Rect(0f, y, UITheme.Width, 140f), "BEAST", titleStyle, UITheme.Gold);
-            if (page == Page.Home)
-                UITheme.ShadowLabel(new Rect(0f, y + 132f, UITheme.Width, 30f), "A tale of the Hollows", UITheme.BodyCenter, new Color(UITheme.Text.r, UITheme.Text.g, UITheme.Text.b, 0.8f));
+            float w = UITheme.Width, h = UITheme.Height;
+            bool home = page == Page.Home;
+            var titleRect = home ? new Rect(w * 0.5f, h * 0.13f, w * 0.45f, 110f) : new Rect(0f, h * 0.04f, w, 90f);
+            var style = UITheme.DisplayTitle;
+            int oldSize = style.fontSize;
+            style.fontSize = home ? 96 : 60;
+            UITheme.ShadowLabel(titleRect, UITheme.Spaced("Beast"), style, UITheme.OffWhite);
+            style.fontSize = oldSize;
+            if (home)
+                UITheme.ShadowLabel(new Rect(titleRect.x, titleRect.yMax + 2f, titleRect.width, 30f), "A tale of the Hollows", subtitleStyle,
+                    new Color(UITheme.OffWhite.r, UITheme.OffWhite.g, UITheme.OffWhite.b, 0.7f));
         }
 
         void DrawHome()
         {
-            float x = (UITheme.Width - ButtonWidth) * 0.5f;
-            float y = 470f;
-            const float gap = 14f;
+            var items = HomeItems();
+            highlighted = Mathf.Clamp(highlighted, 0, items.Count - 1);
+            float x = UITheme.Width * 0.07f;
+            float y = UITheme.Height * 0.46f;
+
+            // Keyboard: Up / Down (W / S) move the swash over enabled items; Enter / Space chooses.
+            var evt = Event.current;
+            if (evt.type == EventType.KeyDown)
+            {
+                int step = evt.keyCode is KeyCode.DownArrow or KeyCode.S ? 1 : evt.keyCode is KeyCode.UpArrow or KeyCode.W ? -1 : 0;
+                if (step != 0)
+                {
+                    for (int i = 0, next = highlighted; i < items.Count; i++)
+                    {
+                        next = (next + step + items.Count) % items.Count;
+                        if (items[next].Enabled) { highlighted = next; break; }
+                    }
+                    evt.Use();
+                }
+                else if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter or KeyCode.Space && items[highlighted].Enabled)
+                {
+                    evt.Use();
+                    items[highlighted].Choose();
+                    return;
+                }
+            }
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                var row = new Rect(x, y + i * ItemSpacing, 440f, 50f);
+                if (items[i].Enabled && row.Contains(evt.mousePosition)) highlighted = i;
+            }
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                var row = new Rect(x, y + i * ItemSpacing, 440f, 50f);
+                var text = new Rect(row.x + 22f, row.y, row.width - 22f, row.height);
+                var old = GUI.color;
+                if (!item.Enabled) GUI.color = new Color(1f, 1f, 1f, 0.35f);
+                if (i == highlighted)
+                {
+                    UITheme.Swash(row);
+                    GUI.Label(text, UITheme.Spaced(item.Label), menuItemOnSwash);
+                }
+                else
+                {
+                    UITheme.ShadowLabel(text, UITheme.Spaced(item.Label), UITheme.MenuItem, UITheme.OffWhite);
+                }
+                GUI.color = old;
+                if (item.Enabled && UITheme.PaperClick(row))
+                {
+                    item.Choose();
+                    return;
+                }
+            }
 
             if (continueSlot >= 0)
             {
-                if (UITheme.Button(new Rect(x, y, ButtonWidth, ButtonHeight), "Continue", primary: true)) Continue();
                 var info = slots[continueSlot];
-                GUI.Label(new Rect(x - 100f, y + ButtonHeight + 2f, ButtonWidth + 200f, 20f),
-                    $"<color={UITheme.MutedHex}>Slot {continueSlot + 1} · {DayLine(info.Summary)} · played {PlayTime(info.Summary.playSeconds)}</color>", UITheme.SmallCenter);
-                y += ButtonHeight + gap + 22f;
+                var old = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, 0.7f);
+                GUI.Label(new Rect(x + 22f, y + items.Count * ItemSpacing + 8f, 600f, 26f),
+                    $"Continue: slot {continueSlot + 1} · {DayLine(info.Summary)} · played {PlayTime(info.Summary.playSeconds)}", UITheme.InkSmall);
+                GUI.color = old;
             }
-
-            if (UITheme.Button(new Rect(x, y, ButtonWidth, ButtonHeight), "New Game", primary: continueSlot < 0)) Open(Page.NewGame);
-            y += ButtonHeight + gap;
-            if (UITheme.Button(new Rect(x, y, ButtonWidth, ButtonHeight), "Load Game", anySave)) Open(Page.LoadGame);
-            y += ButtonHeight + gap;
-            if (UITheme.Button(new Rect(x, y, ButtonWidth, ButtonHeight), "Settings")) settingsPanel.Open();
-            y += ButtonHeight + gap;
-            if (UITheme.Button(new Rect(x, y, ButtonWidth, ButtonHeight), "Quit")) Quit();
         }
 
         void DrawSlots()
         {
-            const float width = 760f;
+            bool newGame = page == Page.NewGame;
             const float cardHeight = 118f;
             const float gap = 12f;
-            float height = 66f + slots.Length * (cardHeight + gap) + 70f;
-            var panel = new Rect((UITheme.Width - width) * 0.5f, Mathf.Max(230f, (UITheme.Height - height) * 0.5f + 60f), width, height);
-            UITheme.Panel(panel);
+            float height = 70f + slots.Length * (cardHeight + gap) + 86f;
+            var content = UITheme.ParchmentWindow(800f, height, newGame ? "New Game" : "Load Game",
+                newGame ? "Choose a slot for this journey" : "Choose a save", backdrop: false);
 
-            bool newGame = page == Page.NewGame;
-            GUI.Label(new Rect(panel.x + 24f, panel.y + 14f, width - 48f, 34f), newGame ? "New Game" : "Load Game", UITheme.Title);
-            GUI.Label(new Rect(panel.x + 24f, panel.y + 16f, width - 48f, 30f),
-                $"<color={UITheme.MutedHex}>{(newGame ? "Choose a slot for this journey" : "Choose a save")}</color>", UITheme.SmallRight);
-            UITheme.Fill(new Rect(panel.x + 20f, panel.y + 54f, width - 40f, 1f), new Color(0.55f, 0.43f, 0.25f, 0.5f));
-
-            float y = panel.y + 66f;
+            float y = content.y;
             foreach (var info in slots)
             {
-                DrawSlotCard(new Rect(panel.x + 20f, y, width - 40f, cardHeight), info, newGame);
+                DrawSlotCard(new Rect(content.x, y, content.width, cardHeight), info, newGame);
                 y += cardHeight + gap;
             }
 
-            float footerY = panel.yMax - 58f;
-            if (UITheme.Button(new Rect(panel.x + 20f, footerY, 160f, 42f), "Back")) Open(Page.Home);
-            GUI.Label(new Rect(panel.x + 200f, footerY, width - 220f, 42f), $"<color={UITheme.MutedHex}>Esc  back</color>", UITheme.SmallRight);
+            if (UITheme.BrushButton(new Rect(content.x, content.yMax - 46f, 170f, 46f), "Back")) Open(Page.Home);
         }
 
         void DrawSlotCard(Rect rect, SlotInfo info, bool newGame)
         {
-            UITheme.Inset(rect);
-            float x = rect.x + 18f;
-            float textWidth = rect.width - 260f;
-            GUI.Label(new Rect(x, rect.y + 10f, textWidth, 28f), $"Slot {info.Slot + 1}", UITheme.Header);
+            UITheme.PaperCard(rect, false);
+            float x = rect.x + 20f;
+            float textWidth = rect.width - 290f;
+            GUI.Label(new Rect(x, rect.y + 10f, textWidth, 30f), UITheme.Spaced($"Slot {info.Slot + 1}"), slotTitle);
 
             if (!info.Exists)
-                GUI.Label(new Rect(x, rect.y + 44f, textWidth, 24f), $"<color={UITheme.MutedHex}>Empty</color>", UITheme.Body);
+                GUI.Label(new Rect(x, rect.y + 46f, textWidth, 24f), "Empty", UITheme.PaperMuted);
             else if (!info.Readable)
             {
-                GUI.Label(new Rect(x, rect.y + 40f, textWidth, 24f), $"<color={UITheme.BadHex}>Damaged save</color>", UITheme.Body);
-                GUI.Label(new Rect(x, rect.y + 64f, textWidth, 20f), $"<color={UITheme.MutedHex}>It can't be read, or it's from a newer version of the game.</color>", UITheme.Small);
+                GUI.Label(new Rect(x, rect.y + 44f, textWidth, 24f), $"<color={UITheme.VermilionHex}>Damaged save</color>", UITheme.PaperBody);
+                GUI.Label(new Rect(x, rect.y + 70f, textWidth, 22f), "It can't be read, or it's from a newer version of the game.", UITheme.PaperMuted);
             }
             else
             {
                 var summary = info.Summary;
-                GUI.Label(new Rect(x, rect.y + 40f, textWidth, 24f), DayLine(summary), UITheme.Body);
+                GUI.Label(new Rect(x, rect.y + 44f, textWidth, 24f), DayLine(summary), UITheme.PaperBody);
                 if (summary.details != null && summary.details.Count > 0)
-                    GUI.Label(new Rect(x, rect.y + 64f, textWidth, 20f), $"<color={UITheme.MutedHex}>{string.Join(" · ", summary.details)}</color>", UITheme.Small);
-                GUI.Label(new Rect(x, rect.y + 86f, textWidth, 20f),
-                    $"<color={UITheme.MutedHex}>Played {PlayTime(summary.playSeconds)} · saved {info.SavedAt:MMM d, HH:mm}</color>", UITheme.Small);
+                    GUI.Label(new Rect(x, rect.y + 68f, textWidth, 22f), string.Join(" · ", summary.details), UITheme.PaperMuted);
+                GUI.Label(new Rect(x, rect.y + 90f, textWidth, 22f),
+                    $"Played {PlayTime(summary.playSeconds)} · saved {info.SavedAt:MMM d, HH:mm}", UITheme.PaperMuted);
             }
 
-            var buttons = new Rect(rect.xMax - 236f, rect.y + 12f, 220f, rect.height - 24f);
+            var buttons = new Rect(rect.xMax - 256f, rect.y + 14f, 236f, rect.height - 28f);
             if (confirm != Confirm.None && confirmSlot == info.Slot)
             {
                 DrawConfirm(buttons, info);
@@ -264,33 +376,33 @@ namespace Beast.Gameplay
             if (newGame)
             {
                 string label = info.Exists ? "Start over here" : "Start here";
-                if (UITheme.Button(new Rect(buttons.x, buttons.y + 20f, buttons.width, 46f), label, primary: !info.Exists))
+                if (UITheme.BrushButton(new Rect(buttons.x, buttons.center.y - 23f, buttons.width, 46f), label))
                 {
                     if (info.Exists) Ask(Confirm.Overwrite, info.Slot);
-                    else StartNewGame(info.Slot);
+                    else OpenCreator(info.Slot);
                 }
                 return;
             }
 
             if (!info.Exists) return; // nothing to load or delete
-            if (info.Readable && UITheme.Button(new Rect(buttons.x, buttons.y, buttons.width, 44f), "Load", primary: true)) LoadSlot(info.Slot);
-            if (UITheme.Button(new Rect(buttons.x, buttons.y + 52f, buttons.width, 38f), "Delete")) Ask(Confirm.Delete, info.Slot);
+            if (info.Readable && UITheme.BrushButton(new Rect(buttons.x, buttons.y, buttons.width, 44f), "Load")) LoadSlot(info.Slot);
+            if (UITheme.BrushButton(new Rect(buttons.x + 40f, buttons.y + 52f, buttons.width - 40f, 38f), "Delete")) Ask(Confirm.Delete, info.Slot);
         }
 
         void DrawConfirm(Rect area, SlotInfo info)
         {
             bool overwrite = confirm == Confirm.Overwrite;
-            GUI.Label(new Rect(area.x - 40f, area.y - 4f, area.width + 40f, 40f),
-                $"<color={UITheme.BadHex}>{(overwrite ? $"Start over? Slot {info.Slot + 1}'s save will be lost." : $"Delete slot {info.Slot + 1} for good?")}</color>",
-                UITheme.Small);
+            GUI.Label(new Rect(area.x - 50f, area.y - 6f, area.width + 50f, 44f),
+                $"<color={UITheme.VermilionHex}>{(overwrite ? $"Start over? Slot {info.Slot + 1}'s save will be lost." : $"Delete slot {info.Slot + 1} for good?")}</color>",
+                UITheme.PaperMuted);
             float half = area.width * 0.5f - 5f;
-            if (UITheme.Button(new Rect(area.x, area.y + 44f, half, 42f), overwrite ? "Overwrite" : "Delete"))
+            if (UITheme.BrushButton(new Rect(area.x, area.y + 44f, half, 42f), overwrite ? "Overwrite" : "Delete"))
             {
                 confirm = Confirm.None;
-                if (overwrite) StartNewGame(info.Slot);
+                if (overwrite) OpenCreator(info.Slot);
                 else DeleteSlot(info.Slot);
             }
-            if (UITheme.Button(new Rect(area.x + half + 10f, area.y + 44f, half, 42f), "Cancel")) confirm = Confirm.None;
+            if (UITheme.BrushButton(new Rect(area.x + half + 10f, area.y + 44f, half, 42f), "Cancel")) confirm = Confirm.None;
         }
 
         void Ask(Confirm kind, int slot)
@@ -308,30 +420,178 @@ namespace Beast.Gameplay
             return minutes < 60 ? $"{minutes} min" : $"{minutes / 60} h {minutes % 60:00} min";
         }
 
-        // ---------- Backdrop (placeholder art drawn in code) ----------
+        // ---------- Character creator ----------
+
+        void DrawCreator()
+        {
+            var content = UITheme.ParchmentWindow(1000f, 640f, "Create your hero", $"New game in slot {createSlot + 1}", backdrop: false);
+
+            // Preview: the real in-game sprite, idling, turnable, on an ink stage.
+            var stage = new Rect(content.x, content.y, 320f, content.height - 70f);
+            UITheme.InkPanel(stage);
+            DrawPreview(new Rect(stage.center.x - 120f, stage.y + 26f, 240f, 320f));
+            if (UITheme.BrushButton(new Rect(stage.x + 18f, stage.yMax - 60f, 64f, 42f), "‹", light: true)) previewDirection = (previewDirection + 1) % 8;
+            var oldColor = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, 0.7f);
+            GUI.Label(new Rect(stage.x + 94f, stage.yMax - 60f, stage.width - 188f, 42f), UITheme.Spaced("Turn"), centredInkBody);
+            GUI.color = oldColor;
+            if (UITheme.BrushButton(new Rect(stage.xMax - 82f, stage.yMax - 60f, 64f, 42f), "›", light: true)) previewDirection = (previewDirection + 7) % 8;
+
+            float x = stage.xMax + 32f;
+            const float labelWidth = 160f;
+            float fieldX = x + labelWidth;
+            float fieldWidth = content.xMax - fieldX;
+            float y = content.y + 8f;
+            const float rowGap = 74f;
+
+            Label(x, y, "Hair");
+            look.hairStyle = UITheme.PaperStepper(new Rect(fieldX, y, fieldWidth, 44f), look.hairStyle, CharacterAppearance.HairStyleNames.Length,
+                CharacterAppearance.HairStyleNames[look.hairStyle]);
+            y += rowGap;
+
+            Label(x, y, "Hair colour");
+            look.hairColor = Swatches(new Rect(fieldX, y, fieldWidth, 44f), look.hairColor, CharacterAppearance.HairColors);
+            GUI.Label(new Rect(fieldX, y + 46f, fieldWidth, 22f), CharacterAppearance.HairColorNames[look.hairColor], UITheme.PaperMuted);
+            y += rowGap + 8f;
+
+            Label(x, y, "Skin");
+            look.skinTone = Swatches(new Rect(fieldX, y, fieldWidth, 44f), look.skinTone, CharacterAppearance.SkinTones);
+            GUI.Label(new Rect(fieldX, y + 46f, fieldWidth, 22f), CharacterAppearance.SkinToneNames[look.skinTone], UITheme.PaperMuted);
+            y += rowGap + 8f;
+
+            Label(x, y, "Outfit");
+            look.outfit = UITheme.PaperStepper(new Rect(fieldX, y, fieldWidth, 44f), look.outfit, CharacterAppearance.Outfits.Length,
+                CharacterAppearance.Outfits[look.outfit].Name);
+            y += rowGap;
+
+            Label(x, y, "Preview with");
+            previewWeapon = (WeaponLook)UITheme.PaperOptions(new Rect(fieldX, y, fieldWidth, 44f), (int)previewWeapon, WeaponNames);
+            GUI.Label(new Rect(fieldX, y + 50f, fieldWidth, 40f), "In the world you carry whichever weapon you have equipped.", UITheme.PaperMuted);
+
+            float footerY = content.yMax - 48f;
+            if (UITheme.BrushButton(new Rect(content.x, footerY, 170f, 48f), "Back")) Open(Page.NewGame);
+            if (UITheme.BrushButton(new Rect(content.x + 182f, footerY, 220f, 48f), "Randomise")) look = CharacterAppearance.Random();
+            if (UITheme.BrushButton(new Rect(content.xMax - 320f, footerY, 320f, 48f), "Begin your journey"))
+                StartNewGame(createSlot, look);
+        }
+
+        void Label(float x, float y, string text) => GUI.Label(new Rect(x, y, 160f, 44f), text, paperLabel);
+
+        /// <summary>A row of colour squares on parchment; the chosen one has a vermilion frame. Returns the chosen index.</summary>
+        static int Swatches(Rect rect, int selected, Color32[] colors)
+        {
+            float size = Mathf.Min(rect.height, (rect.width - 10f * (colors.Length - 1)) / colors.Length);
+            for (int i = 0; i < colors.Length; i++)
+            {
+                var cell = new Rect(rect.x + i * (size + 10f), rect.y, size, size);
+                bool chosen = i == selected;
+                UITheme.Fill(cell, chosen ? UITheme.Vermilion : UITheme.Ink);
+                float inset = chosen ? 4f : 1.5f;
+                UITheme.Fill(new Rect(cell.x + inset, cell.y + inset, cell.width - inset * 2f, cell.height - inset * 2f), colors[i]);
+                if (UITheme.PaperClick(cell)) selected = i;
+            }
+            return selected;
+        }
+
+        /// <summary>One frame of the idle clip, facing previewDirection (0 = toward you), drawn from a sheet built for the current look.</summary>
+        void DrawPreview(Rect rect)
+        {
+            if (previewSheet == null || previewAppearance == null || !previewAppearance.SameAs(look) || previewSheetWeapon != previewWeapon)
+            {
+                if (previewSheet != null) Destroy(previewSheet);
+                previewSheet = CharacterSpriteBuilder.Build(look.ToPalette(previewWeapon));
+                previewAppearance = look.Clone();
+                previewSheetWeapon = previewWeapon;
+            }
+
+            var idle = CharacterSpriteBuilder.Layout[0];
+            int frame = idle.Start + (int)(Time.unscaledTime * idle.Fps) % idle.Count;
+            int row = previewDirection > 4 ? 8 - previewDirection : previewDirection;
+            bool flip = previewDirection > 4;
+
+            float w = previewSheet.width, h = previewSheet.height;
+            float cellW = CharacterSpriteBuilder.CellWidth / w, cellH = CharacterSpriteBuilder.CellHeight / h;
+            float u = frame * cellW;
+            float v = (h - (row + 1) * CharacterSpriteBuilder.CellHeight) / h;
+            var uv = flip ? new Rect(u + cellW, v, -cellW, cellH) : new Rect(u, v, cellW, cellH);
+
+            // A soft pool of light under the feet.
+            UITheme.DrawIcon(new Rect(rect.center.x - 80f, rect.yMax - 24f, 160f, 30f), UITheme.CircleIcon, new Color(1f, 1f, 1f, 0.08f));
+            GUI.DrawTextureWithTexCoords(rect, previewSheet, uv);
+        }
+
+        // ---------- Storm backdrop (placeholder art drawn in code) ----------
 
         void BuildBackdrop()
         {
-            // Dusk: deep blue overhead fading to a warm horizon.
             sky = new Texture2D(1, 256, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-            var top = new Color(0.04f, 0.05f, 0.11f);
-            var mid = new Color(0.16f, 0.13f, 0.22f);
-            var horizon = new Color(0.62f, 0.34f, 0.20f);
+            var top = new Color(0.11f, 0.125f, 0.145f);
+            var horizon = new Color(0.23f, 0.25f, 0.28f);
+            var bottom = new Color(0.10f, 0.11f, 0.12f);
             for (int y = 0; y < 256; y++)
             {
                 float t = y / 255f; // 0 bottom, 1 top
-                var c = t < 0.35f ? Color.Lerp(horizon, mid, t / 0.35f) : Color.Lerp(mid, top, (t - 0.35f) / 0.65f);
+                var c = t < 0.38f ? Color.Lerp(bottom, horizon, t / 0.38f) : Color.Lerp(horizon, top, (t - 0.38f) / 0.62f);
                 sky.SetPixel(0, y, c);
             }
             sky.Apply();
 
-            farHills = Ridge(new Color(0.13f, 0.10f, 0.15f), 11, 0.55f, pines: false);
-            nearHills = Ridge(new Color(0.05f, 0.045f, 0.06f), 29, 0.35f, pines: true);
+            clouds = CloudTexture(512, 128, 21);
+            farHills = Ridge(new Color(0.14f, 0.15f, 0.17f), 11, 0.55f, pines: false);
+            nearHills = Ridge(new Color(0.055f, 0.06f, 0.065f), 29, 0.35f, pines: true);
 
+            // Ash: x, y (0-1), fall speed, sway phase.
             var random = new System.Random(16);
-            stars = new Vector3[90];
-            for (int i = 0; i < stars.Length; i++)
-                stars[i] = new Vector3((float)random.NextDouble(), (float)random.NextDouble() * 0.55f, (float)random.NextDouble() * 6.28f);
+            ash = new Vector4[140];
+            for (int i = 0; i < ash.Length; i++)
+                ash[i] = new Vector4((float)random.NextDouble(), (float)random.NextDouble(), 0.015f + (float)random.NextDouble() * 0.03f, (float)random.NextDouble() * 6.28f);
+        }
+
+        /// <summary>Soft storm clouds: tileable value noise (wraps left-right), faded out at the top and bottom of the strip.</summary>
+        static Texture2D CloudTexture(int width, int height, int seed)
+        {
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear };
+            var random = new System.Random(seed);
+            int[] octaveX = { 5, 11, 23, 47 }, octaveY = { 2, 4, 8, 16 };
+            float[] weights = { 0.5f, 0.27f, 0.15f, 0.08f };
+            var octaves = new float[octaveX.Length][,];
+            for (int o = 0; o < octaves.Length; o++)
+            {
+                octaves[o] = new float[octaveX[o], octaveY[o] + 1];
+                for (int x = 0; x < octaveX[o]; x++) for (int y = 0; y <= octaveY[o]; y++) octaves[o][x, y] = (float)random.NextDouble();
+            }
+            var colour = new Color(0.36f, 0.39f, 0.43f);
+            var pixels = new Color32[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                float v = y / (height - 1f);
+                float envelope = Mathf.Sin(v * Mathf.PI);
+                for (int x = 0; x < width; x++)
+                {
+                    float u = x / (float)width;
+                    float n = 0f;
+                    for (int o = 0; o < octaves.Length; o++) n += weights[o] * Sample(octaves[o], octaveX[o], octaveY[o], u, v);
+                    float alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((n - 0.4f) * 3f)) * envelope;
+                    pixels[y * width + x] = new Color(colour.r, colour.g, colour.b, alpha);
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply();
+            return tex;
+        }
+
+        static float Sample(float[,] lattice, int cellsX, int cellsY, float u, float v)
+        {
+            float fx = u * cellsX, fy = v * cellsY;
+            int x0 = (int)fx, y0 = Mathf.Min((int)fy, cellsY - 1);
+            float tx = fx - x0, ty = fy - y0;
+            tx = tx * tx * (3f - 2f * tx);
+            ty = ty * ty * (3f - 2f * ty);
+            int x1 = (x0 + 1) % cellsX;
+            x0 %= cellsX;
+            float a = Mathf.Lerp(lattice[x0, y0], lattice[x1, y0], tx);
+            float b = Mathf.Lerp(lattice[x0, y0 + 1], lattice[x1, y0 + 1], tx);
+            return Mathf.Lerp(a, b, ty);
         }
 
         /// <summary>A silhouette strip: rolling hills (and pine tops) over transparent sky.</summary>
@@ -381,21 +641,35 @@ namespace Beast.Gameplay
             GUI.DrawTexture(new Rect(0f, 0f, w, h), sky, ScaleMode.StretchToFill);
 
             float time = Time.unscaledTime;
-            foreach (var star in stars)
-            {
-                float twinkle = 0.45f + 0.35f * Mathf.Sin(time * 1.3f + star.z * 3f);
-                UITheme.Fill(new Rect(star.x * w, star.y * h, 2f, 2f), new Color(1f, 0.96f, 0.86f, twinkle));
-            }
+            // Three cloud bands drifting at different speeds.
+            DrawClouds(h * 0.02f, h * 0.30f, time * 0.006f, 0.55f, 1.6f);
+            DrawClouds(h * 0.18f, h * 0.26f, time * 0.011f + 0.3f, 0.40f, 1.1f);
+            DrawClouds(h * 0.34f, h * 0.20f, time * 0.018f + 0.6f, 0.28f, 0.8f);
 
-            var moon = new Rect(w * 0.74f, h * 0.12f, 90f, 90f);
-            UITheme.DrawIcon(new Rect(moon.x - 40f, moon.y - 40f, moon.width + 80f, moon.height + 80f), UITheme.CircleIcon, new Color(1f, 0.92f, 0.75f, 0.08f));
-            UITheme.DrawIcon(moon, UITheme.CircleIcon, new Color(0.98f, 0.93f, 0.80f, 0.95f));
-
-            // Hills drift very slowly, for a little life.
             float drift = time * 4f % w;
-            DrawStrip(farHills, h * 0.40f, h * 0.60f, -drift * 0.4f);
-            DrawStrip(nearHills, h * 0.55f, h * 0.45f, -drift);
-            UITheme.Fill(new Rect(0f, h - 2f, w, 2f), new Color(0.05f, 0.045f, 0.06f));
+            DrawStrip(farHills, h * 0.42f, h * 0.58f, -drift * 0.4f);
+            DrawStrip(nearHills, h * 0.58f, h * 0.42f, -drift);
+
+            // Falling ash: slow, swaying, wrapping around.
+            var old = GUI.color;
+            foreach (var a in ash)
+            {
+                float y = Mathf.Repeat(a.y + time * a.z, 1f);
+                float x = Mathf.Repeat(a.x + Mathf.Sin(time * 0.6f + a.w) * 0.01f + time * 0.004f, 1f);
+                float size = 2f + (a.w % 1f);
+                UITheme.Fill(new Rect(x * w, y * h, size, size), new Color(0.95f, 0.94f, 0.91f, 0.2f + 0.35f * Mathf.Abs(Mathf.Sin(a.w))));
+            }
+            GUI.color = old;
+            UITheme.Fill(new Rect(0f, h - 2f, w, 2f), new Color(0.05f, 0.05f, 0.055f));
+        }
+
+        void DrawClouds(float y, float height, float offset, float alpha, float scale)
+        {
+            float w = UITheme.Width;
+            var old = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, alpha);
+            GUI.DrawTextureWithTexCoords(new Rect(0f, y, w, height), clouds, new Rect(offset, 0f, scale, 1f));
+            GUI.color = old;
         }
 
         static void DrawStrip(Texture2D tex, float y, float height, float offset)

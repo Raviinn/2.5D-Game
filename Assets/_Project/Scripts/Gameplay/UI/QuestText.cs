@@ -18,8 +18,10 @@ namespace Beast.Gameplay
             return sb.Length > 0 ? sb.ToString() : "—";
         }
 
-        public static string Objectives(QuestData quest, QuestLog log)
+        /// <summary>The objective list, ticked ones in 'doneHex' (default: the dark theme's green).</summary>
+        public static string Objectives(QuestData quest, QuestLog log, string doneHex = null)
         {
+            doneHex ??= UITheme.GoodHex;
             var sb = new StringBuilder();
             if (quest.Objectives == null) return string.Empty;
             bool finished = log.StatusOf(quest) == QuestStatus.Completed;
@@ -29,7 +31,7 @@ namespace Beast.Gameplay
                 bool done = finished || log.IsObjectiveDone(quest, i);
                 int progress = finished ? objective.Count : log.ObjectiveProgress(quest, i);
                 string count = objective.Count > 1 ? $" ({progress}/{objective.Count})" : string.Empty;
-                sb.Append(done ? $"<color={UITheme.GoodHex}>■ " : "□ ").Append(objective.Text).Append(count).Append(done ? "</color>" : "").Append('\n');
+                sb.Append(done ? $"<color={doneHex}>■ " : "□ ").Append(objective.Text).Append(count).Append(done ? "</color>" : "").Append('\n');
             }
             return sb.ToString().TrimEnd('\n');
         }
@@ -53,6 +55,22 @@ namespace Beast.Gameplay
             QuestType.Story => UITheme.GoldHex,
             QuestType.Contract => UITheme.InfoHex,
             _ => UITheme.TextHex,
+        };
+
+        /// <summary>Quest-type colour readable on parchment (story gold-dark, contracts blue, side ink).</summary>
+        public static string TypeColorOnPaper(QuestType type) => type switch
+        {
+            QuestType.Story => UITheme.InkGoldDarkHex,
+            QuestType.Contract => UITheme.InfoOnPaperHex,
+            _ => UITheme.InkHex,
+        };
+
+        /// <summary>Quest-type colour readable on ink panels.</summary>
+        public static string TypeColorOnInk(QuestType type) => type switch
+        {
+            QuestType.Story => UITheme.InkGoldHex,
+            QuestType.Contract => UITheme.InfoOnInkHex,
+            _ => UITheme.OffWhiteHex,
         };
 
         static void Append(StringBuilder sb, string text)

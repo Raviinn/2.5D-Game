@@ -16,7 +16,7 @@ MonoBehaviour:
   DisplayName: Iron Helm
   Description: Dented but solid.
   Category: 4
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: ded6051dfcf9ddc4cbefcdbd54f75621, type: 3}
   PlaceholderColor: {r: 0.55, g: 0.45, b: 0.35, a: 1}
   MaxStack: 1
   BaseValue: 110

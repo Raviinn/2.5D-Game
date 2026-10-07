@@ -52,9 +52,30 @@ namespace Beast.Gameplay
         float brightness = 1f;
         int occluderMask;
         bool perPixelShadows;
+        Texture2D textureOverride;
 
         /// <summary>0 = facing the camera, 2 = facing screen-right, 4 = facing away, 6 = facing screen-left.</summary>
         public int CurrentDirection { get; private set; }
+        public DirectionalSpriteSheet Sheet => sheet;
+        /// <summary>The character this sprite belongs to (the object that faces and moves).</summary>
+        public Transform Character => facingRoot;
+        /// <summary>The clip being shown (null before the first frame).</summary>
+        public DirectionalSpriteSheet.Clip CurrentClip { get; private set; }
+
+        /// <summary>
+        /// Raised when a character shows a new animation frame: (renderer, animation, frame within the clip).
+        /// Sounds listen (footsteps on contact frames, swings on the strike frame).
+        /// </summary>
+        public static event System.Action<DirectionalSpriteRenderer, CharacterAnim, int> FrameShown;
+
+        int lastEventFrame = -1;
+        CharacterAnim lastEventAnim;
+
+        /// <summary>
+        /// Draws with this texture instead of the sheet's own (same grid and clips), e.g. the player's
+        /// customised placeholder. Null goes back to the sheet's texture.
+        /// </summary>
+        public void SetTextureOverride(Texture2D texture) => textureOverride = texture;
 
         void Awake()
         {
@@ -121,6 +142,13 @@ namespace Beast.Gameplay
 
             int column = GetColumn();
             if (column < 0) return;
+            int clipFrame = column - CurrentClip.StartColumn;
+            if (clipFrame != lastEventFrame || currentAnim != lastEventAnim)
+            {
+                lastEventFrame = clipFrame;
+                lastEventAnim = currentAnim;
+                FrameShown?.Invoke(this, currentAnim, clipFrame);
+            }
             Apply(body, row, column, flip);
             if (shadow != null) Apply(shadow, row, column, flip);
         }
@@ -164,6 +192,7 @@ namespace Beast.Gameplay
         {
             var anim = source?.CurrentAnim ?? CharacterAnim.Idle;
             var clip = sheet.Find(anim);
+            CurrentClip = clip;
             if (clip == null) return -1;
 
             if (anim != currentAnim)
@@ -213,7 +242,7 @@ namespace Beast.Gameplay
 
         void Apply(Renderer target, int row, int column, bool flip)
         {
-            var texture = sheet.Texture;
+            var texture = textureOverride != null ? textureOverride : sheet.Texture;
             float width = texture.width;
             float height = texture.height;
             float scaleX = sheet.CellSize.x / width;

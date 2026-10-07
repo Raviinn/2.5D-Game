@@ -16,7 +16,7 @@ MonoBehaviour:
   DisplayName: Turnip
   Description: Crunchy and filling. Sells well at market, or eat it to heal.
   Category: 3
-  Icon: {fileID: 0}
+  Icon: {fileID: 21300000, guid: e51d37a7cf82c3d428e21435f0288e6d, type: 3}
   PlaceholderColor: {r: 0.85, g: 0.75, b: 0.9, a: 1}
   MaxStack: 50
   BaseValue: 12

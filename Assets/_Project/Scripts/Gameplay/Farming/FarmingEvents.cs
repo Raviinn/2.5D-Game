@@ -10,6 +10,16 @@ namespace Beast.Gameplay
         public CropHarvestedEvent(CropData crop, int count) { Crop = crop; Count = count; }
     }
 
+    public enum FarmAction { Till, Plant, Clear, Harvest, Water }
+
+    /// <summary>Raised when the player works a farm tile (till, plant, clear, harvest, water).</summary>
+    public readonly struct FarmActionEvent : IEvent
+    {
+        public readonly FarmAction Action;
+        public readonly UnityEngine.Vector3 Position;
+        public FarmActionEvent(FarmAction action, UnityEngine.Vector3 position) { Action = action; Position = position; }
+    }
+
     /// <summary>Raised after the player sleeps (the HUD fades to black and shows the new day).</summary>
     public readonly struct SleptEvent : IEvent
     {
