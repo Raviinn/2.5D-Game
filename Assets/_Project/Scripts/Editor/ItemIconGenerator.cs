@@ -69,7 +69,9 @@ namespace Beast.EditorTools
             bool rusted = n.Contains("Rusted");
             if (n.Contains("Seeds")) DrawSeedPouch(c, n.Contains("Healroot") ? new Color32(196, 52, 66, 255) : new Color32(96, 176, 76, 255));
             else if (n.Contains("Bread")) DrawBread(c);
-            else if (n.Contains("Draught") || n.Contains("Potion")) DrawFlask(c, item.PlaceholderColor);
+            else if (n.Contains("Draught") || n.Contains("Potion") || n.Contains("Tonic")) DrawFlask(c, item.PlaceholderColor);
+            else if (n.Contains("Stew")) DrawBowl(c, new Color32(176, 112, 64, 255), steam: true);
+            else if (n.Contains("Roast")) DrawRoast(c);
             else if (n.Contains("Healroot")) DrawHealroot(c);
             else if (n.Contains("Turnip")) DrawTurnip(c);
             else if (n.Contains("Cloth")) DrawCloth(c);
@@ -136,6 +138,34 @@ namespace Beast.EditorTools
             c.Rect(12, 3, 8, 4, new Color32(150, 104, 60, 255));
             c.Rect(12, 3, 8, 1, new Color32(186, 138, 86, 255));
             c.Rect(10, 17, 2, 4, new Color32(250, 252, 255, 255));
+        }
+
+        static void DrawBowl(Canvas c, Color32 soup, bool steam)
+        {
+            var wood = new Color32(132, 86, 50, 255);
+            var woodLight = new Color32(170, 116, 70, 255);
+            c.Ellipse(16, 21, 13, 7, wood);
+            c.Rect(5, 17, 23, 4, wood);
+            c.Ellipse(16, 16, 12, 4, woodLight);
+            c.Ellipse(16, 16, 10, 3, soup);
+            c.Circle(12, 16, 1, new Color32(150, 78, 168, 255));
+            c.Circle(19, 15, 1, new Color32(238, 230, 238, 255));
+            if (!steam) return;
+            var vapour = new Color32(236, 236, 236, 255);
+            c.Line(11, 11, 12, 5, vapour, 1);
+            c.Line(16, 11, 15, 4, vapour, 1);
+            c.Line(21, 11, 22, 6, vapour, 1);
+        }
+
+        static void DrawRoast(Canvas c)
+        {
+            c.Line(4, 27, 28, 6, new Color32(150, 104, 60, 255), 2); // skewer
+            c.Circle(11, 21, 5, new Color32(206, 150, 90, 255));
+            c.Circle(11, 21, 5, new Color32(160, 82, 120, 255), maxY: 18);
+            c.Circle(20, 13, 5, new Color32(206, 150, 90, 255));
+            c.Circle(20, 13, 5, new Color32(160, 82, 120, 255), maxY: 10);
+            c.Rect(9, 22, 3, 1, new Color32(110, 66, 36, 255));
+            c.Rect(18, 14, 3, 1, new Color32(110, 66, 36, 255));
         }
 
         static void DrawHealroot(Canvas c)

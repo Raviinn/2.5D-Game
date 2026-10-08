@@ -30,6 +30,12 @@ namespace Beast.Gameplay
         public bool IsFocused { get; internal set; }
 
         /// <summary>
+        /// True while this can't be used or seen at all (an NPC asleep indoors): skipped by the interactor, quest markers
+        /// and the minimap. Unlike disabling the component, it keeps saving and listening to events.
+        /// </summary>
+        public bool Unavailable { get; set; }
+
+        /// <summary>
         /// True if holding Interact repeats the action (working a row of farm tiles). One-shot actions
         /// (sleeping, talking, opening menus) must not repeat, or holding F would e.g. sleep through several nights.
         /// </summary>

@@ -236,7 +236,7 @@ namespace Beast.Gameplay
             if (cam == null) return;
             foreach (var interactable in Interactable.Active)
             {
-                if (interactable is not DialogueSpeaker speaker) continue;
+                if (interactable is not DialogueSpeaker speaker || speaker.Unavailable) continue;
                 char marker = speaker.QuestMarker(log);
                 if (marker == '\0') continue;
                 if (!UITheme.WorldToGui(cam, speaker.transform.position + Vector3.up * 1.8f, out var point)) continue;

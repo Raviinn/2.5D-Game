@@ -59,6 +59,8 @@ namespace Beast.Gameplay
             public HairStyle HairStyle;
             /// <summary>A long two-handed blade instead of a one-handed sword.</summary>
             public bool Greatsword;
+            /// <summary>A bow instead of a blade (archers). Attack frames draw and loose an arrow.</summary>
+            public bool Bow;
         }
 
         static readonly Color32 TrailColor = new(255, 250, 220, 255);
@@ -78,6 +80,8 @@ namespace Beast.Gameplay
             public bool ArmsUp;        // hanging / climbing: both hands above the head, gear stowed
             public int Reach;          // climbing: which hand is higher (+1 left, -1 right), px
             public bool Carry;         // idle / run: a greatsword rests on the shoulder instead of pointing down
+            public bool Aim;           // attack: a bow is held out level
+            public bool Drawn;         // attack wind-up: the bowstring is pulled back with an arrow nocked
         }
 
         /// <summary>A new point-filtered texture with the whole sheet. The caller owns (and destroys) it.</summary>
@@ -135,6 +139,8 @@ namespace Beast.Gameplay
                     pose.Carry = true;
                     break;
                 case CharacterAnim.Attack:
+                    pose.Aim = true;
+                    pose.Drawn = frame < 2;
                     switch (frame)
                     {
                         case 0: pose.WeaponAngle = 110f; pose.Lean = -1; break;           // startup: raise
@@ -316,6 +322,11 @@ namespace Beast.Gameplay
         {
             FillRect(c, hand.x - 1, hand.y - 1, 3, 3, p.Skin);
             if (!p.HasWeapon) return;
+            if (p.Bow)
+            {
+                DrawBow(c, hand, forward, pose, p);
+                return;
+            }
 
             float length = p.Greatsword ? 21f : 16f;
             if (pose.Trail)
@@ -348,6 +359,39 @@ namespace Beast.Gameplay
                 return;
             }
             FillRect(c, hand.x - 1, hand.y - 1, 3, 3, p.Trim); // hilt
+        }
+
+        /// <summary>A curved bow centred on the hand: upright at rest, held out level (and drawn) when attacking.</summary>
+        static void DrawBow(Canvas c, Vector2Int hand, int forward, Pose pose, Palette p)
+        {
+            var aim = Direction(0f, forward); // the bow stands upright either way; at rest it hangs at your side
+            var across = new Vector2(-aim.y, aim.x);
+            var grip = pose.Aim ? new Vector2(hand.x, hand.y) + aim * 5f : new Vector2(hand.x + aim.x, hand.y - 6f); // at rest: low, clear of the face
+            float half = pose.Aim ? 10f : 9f, bulge = 3f;
+            Vector2Int previous = default;
+            for (int i = 0; i <= 10; i++)
+            {
+                float t = i / 10f * 2f - 1f;                       // -1..1 along the bow
+                var point = grip + across * (t * half) + aim * (bulge * (1f - t * t));
+                var pixel = point.ToInt();
+                if (i > 0) Line(c, previous, pixel, p.Trim);
+                previous = pixel;
+            }
+            var top = (grip + across * half).ToInt();
+            var bottom = (grip - across * half).ToInt();
+            if (pose.Drawn)
+            {
+                var pull = (grip - aim * 6f).ToInt();
+                Line(c, top, pull, p.Weapon);
+                Line(c, pull, bottom, p.Weapon);
+                Line(c, pull, (grip + aim * 6f).ToInt(), p.Weapon); // the nocked arrow
+                FillRect(c, pull.x - 1, pull.y - 1, 3, 3, p.Skin);  // drawing hand
+            }
+            else
+            {
+                Line(c, top, bottom, p.Weapon);
+            }
+            FillRect(c, Mathf.RoundToInt(grip.x) - 1, Mathf.RoundToInt(grip.y) - 1, 3, 3, p.Skin);
         }
 
         static void DrawShield(Canvas c, Vector2Int offHand, int forward, Pose pose, Palette p)

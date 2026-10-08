@@ -16,7 +16,7 @@ namespace Beast.EditorTools
     {
         const string Root = "Assets/_Project";
         const string Folder = Root + "/Audio/Placeholder";
-        const string LibraryPath = Root + "/Resources/SoundLibrary.asset";
+        internal const string LibraryPath = Root + "/Resources/SoundLibrary.asset";
 
         [MenuItem("Beast/Setup/Run Milestone 20 Setup (Sound)", priority = 19)]
         public static void Run()
@@ -73,7 +73,7 @@ namespace Beast.EditorTools
                       "SoundLibrary is in Resources. Volumes: Settings → Audio.");
         }
 
-        static AudioClip Clip(string name, Func<float[]> make, float peak, bool loop, ref int written)
+        internal static AudioClip Clip(string name, Func<float[]> make, float peak, bool loop, ref int written)
         {
             string path = $"{Folder}/{name}.wav";
             if (!File.Exists(path))
@@ -102,7 +102,7 @@ namespace Beast.EditorTools
             entry = placeholders;
         }
 
-        static void Fill(ref AudioClip entry, AudioClip placeholder)
+        internal static void Fill(ref AudioClip entry, AudioClip placeholder)
         {
             if (entry != null && !IsPlaceholder(entry)) return;
             entry = placeholder;

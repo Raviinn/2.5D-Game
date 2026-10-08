@@ -6,6 +6,7 @@ namespace Beast.Gameplay
 {
     /// <summary>
     /// Slot-based bag with stacking, plus a gold wallet. Saves item Ids (looked up in the GameDatabase on load).
+    /// Also used for storage (the homestead chest): there, adding items is silent and the save summary leaves it out.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class Inventory : MonoBehaviour, ISaveable, ISaveSummarySource
@@ -21,6 +22,10 @@ namespace Beast.Gameplay
         [SerializeField, Tooltip("Unique, stable ID used in save files.")] string saveId = "player.inventory";
         [SerializeField] StartingItem[] startingItems;
         [SerializeField, Min(0)] int startingGold;
+        [SerializeField, Tooltip("Show \"+N item\" notices when items are added (the player's bag). Off for storage.")]
+        bool announceAdds = true;
+        [SerializeField, Tooltip("List this inventory's gold in save-slot summaries (the player's bag only).")]
+        bool describeInSave = true;
 
         ItemStack[] slots;
 
@@ -61,7 +66,21 @@ namespace Beast.Gameplay
         // ---------- Items ----------
 
         /// <summary>Adds as many as fit. Returns how many did NOT fit.</summary>
-        public int Add(ItemData item, int count) => AddInternal(item, count, raiseEvent: true);
+        public int Add(ItemData item, int count) => AddInternal(item, count, raiseEvent: announceAdds);
+
+        /// <summary>Adds without a "+N item" notice (moving things between bag and storage). Returns how many did NOT fit.</summary>
+        public int AddQuietly(ItemData item, int count) => AddInternal(item, count, raiseEvent: false);
+
+        /// <summary>Slots holding something.</summary>
+        public int UsedSlots
+        {
+            get
+            {
+                int used = 0;
+                foreach (var slot in slots) if (!slot.IsEmpty) used++;
+                return used;
+            }
+        }
 
         public bool Remove(ItemData item, int count)
         {
@@ -158,7 +177,10 @@ namespace Beast.Gameplay
 
         // ---------- Save ----------
 
-        public void Describe(SaveSummary summary) => summary.details.Add($"{Gold} gold");
+        public void Describe(SaveSummary summary)
+        {
+            if (describeInSave) summary.details.Add($"{Gold} gold");
+        }
 
         public string CaptureState()
         {

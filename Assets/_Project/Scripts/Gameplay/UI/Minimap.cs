@@ -179,6 +179,7 @@ namespace Beast.Gameplay
 
             foreach (var interactable in Interactable.Active)
             {
+                if (interactable.Unavailable) continue;
                 switch (interactable)
                 {
                     case DialogueSpeaker speaker:

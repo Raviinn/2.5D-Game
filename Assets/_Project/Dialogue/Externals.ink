@@ -22,6 +22,7 @@ EXTERNAL gold()
 
 // Player ------------------------------------------------------------------------
 EXTERNAL discipline_level(name)                 // "Combat" | "Farming"
+EXTERNAL player_name()                          // the hero's name from the character creator ("Wanderer" if none)
 
 // Standing with the Free Hollows ------------------------------------------------
 EXTERNAL standing()                             // points, 0-500
@@ -61,6 +62,9 @@ EXTERNAL open_shop()                            // opens this NPC's shop when th
 
 === function discipline_level(name) ===
 ~ return 1
+
+=== function player_name() ===
+~ return "Wanderer"
 
 === function standing() ===
 ~ return 0

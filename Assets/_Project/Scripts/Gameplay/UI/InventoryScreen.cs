@@ -48,7 +48,7 @@ namespace Beast.Gameplay
 
         public bool CanOpen => inventory != null;
         public string FooterTip => "Right-click an item to <color=#c9a86a>use or equip</color> it";
-        public (string key, string label)[] KeyHints => new[] { ("Right-click", "Use / equip") };
+        public (string key, string label)[] KeyHints => new[] { ("Right-click", "Use / equip") }; // A on the pad
         public bool HasSubView => false;
         public void CloseSubView() { }
 
@@ -147,6 +147,9 @@ namespace Beast.Gameplay
                     else if (Event.current.button == 0) selected = stack.IsEmpty ? -1 : i;
                     Event.current.Use();
                 }
+                // Pad / arrows: the focused slot is selected (its details show); A on it uses or equips.
+                if (UITheme.NavClick(rect) && !stack.IsEmpty) UsePrimary(stack.Item);
+                if (UITheme.IsNavFocused(rect)) selected = stack.IsEmpty ? -1 : i;
             }
 
             if (shown.Count == 0)

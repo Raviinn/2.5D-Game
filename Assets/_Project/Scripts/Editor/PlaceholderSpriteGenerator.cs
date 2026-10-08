@@ -26,12 +26,14 @@ namespace Beast.EditorTools
         {
             public Color32 Body, Trim, Skin, Hair, Weapon, Outline;
             public bool HasWeapon, HasShield;
+            /// <summary>A bow instead of a sword (archers).</summary>
+            public bool Bow;
 
             /// <summary>The original placeholder look: short hair, the shield painted in the hair colour, one-handed sword.</summary>
             public CharacterSpriteBuilder.Palette ToBuilder() => new()
             {
                 Body = Body, Trim = Trim, Skin = Skin, Hair = Hair, Weapon = Weapon, Outline = Outline, ShieldFace = Hair,
-                HasWeapon = HasWeapon, HasShield = HasShield, HairStyle = HairStyle.Short,
+                HasWeapon = HasWeapon, HasShield = HasShield, HairStyle = HairStyle.Short, Bow = Bow,
             };
         }
 

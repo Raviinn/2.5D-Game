@@ -11,8 +11,8 @@ namespace Beast.Gameplay
     }
 
     /// <summary>
-    /// The player's chosen look (character creator). Stored as indices into the preset lists below,
-    /// so saves stay small and the lists can grow (append only: saves keep the index).
+    /// The player's chosen look and name (character creator, the homestead mirror). The look is stored as indices into
+    /// the preset lists below, so saves stay small and the lists can grow (append only: saves keep the index).
     /// </summary>
     [Serializable]
     public sealed class CharacterAppearance
@@ -56,6 +56,47 @@ namespace Beast.Gameplay
         public int hairColor;
         public int skinTone = 1;
         public int outfit;
+        /// <summary>The hero's name; empty = DefaultName. Letters, spaces, apostrophes and hyphens, up to MaxNameLength.</summary>
+        public string name = "";
+
+        public const int MaxNameLength = 16;
+
+        static readonly string[] SuggestedNames =
+        {
+            "Aldric", "Maren", "Edda", "Torvin", "Isolde", "Bram", "Wren", "Osric", "Hilde", "Corwin",
+            "Sefa", "Ansel", "Ysolt", "Garrick", "Rowan", "Elsbeth", "Doran", "Ilse", "Matthias", "Brienne",
+        };
+
+        /// <summary>A name from the suggestions (for players on a pad, who can't type), never the one given.</summary>
+        public static string RandomName(string notThis = null)
+        {
+            string pick;
+            do pick = SuggestedNames[UnityEngine.Random.Range(0, SuggestedNames.Length)];
+            while (pick == notThis);
+            return pick;
+        }
+        public const string DefaultName = "Wanderer";
+
+        /// <summary>The name to show (DefaultName when none was given).</summary>
+        public string DisplayName => string.IsNullOrWhiteSpace(name) ? DefaultName : name.Trim();
+
+        /// <summary>
+        /// Keeps letters, spaces, apostrophes and hyphens; no double spaces; at most MaxNameLength characters.
+        /// 'trim' also drops spaces at the ends (off while typing, so a space can be typed between two words).
+        /// </summary>
+        public static string CleanName(string text, bool trim = true)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            var clean = new System.Text.StringBuilder(text.Length);
+            foreach (char c in text)
+            {
+                if (char.IsLetter(c) || c is '\'' or '-') clean.Append(c);
+                else if (c == ' ' && clean.Length > 0 && clean[clean.Length - 1] != ' ') clean.Append(' ');
+                if (clean.Length >= MaxNameLength) break;
+            }
+            string result = clean.ToString();
+            return trim ? result.Trim() : result.TrimStart();
+        }
 
         public CharacterAppearance Clone() => (CharacterAppearance)MemberwiseClone();
 

@@ -189,9 +189,14 @@ namespace Beast.Gameplay
         /// Narrow buttons (arrows) are a brush-painted block instead, so the ragged ends don't swallow them.
         /// light: an off-white stroke with ink text, for buttons on ink panels. Long labels shrink to fit.
         /// </summary>
-        public static bool BrushButton(Rect rect, string text, bool enabled = true, bool light = false)
+        public static bool BrushButton(Rect rect, string text, bool enabled = true, bool light = false) =>
+            BrushButton(rect, text, enabled, light, navigable: true);
+
+        /// <summary>navigable: false for buttons that are part of a bigger control (a stepper's arrows).</summary>
+        static bool BrushButton(Rect rect, string text, bool enabled, bool light, bool navigable)
         {
-            bool hovered = enabled && rect.Contains(Event.current.mousePosition);
+            bool focused = enabled && navigable && NavControl(rect);
+            bool hovered = enabled && (rect.Contains(Event.current.mousePosition) || (focused && NavShowing));
             bool narrow = rect.width < 90f;
             var old = GUI.color;
             if (!enabled) GUI.color = new Color(old.r, old.g, old.b, old.a * 0.45f);
@@ -224,11 +229,11 @@ namespace Beast.Gameplay
             style.fontSize = baseSize;
             style.font = baseFont;
             GUI.color = old;
-            return enabled && Click(GUI.Button(rect, GUIContent.none, GUIStyle.none));
+            return enabled && Click(GUI.Button(rect, GUIContent.none, GUIStyle.none) | NavPressed(rect, focused));
         }
 
-        /// <summary>An invisible click area (for custom-drawn controls) that still plays the click sound.</summary>
-        public static bool PaperClick(Rect rect) => Click(GUI.Button(rect, GUIContent.none, GUIStyle.none));
+        /// <summary>An invisible click area (for custom-drawn controls) that still plays the click sound. Navigable.</summary>
+        public static bool PaperClick(Rect rect) => NavClick(rect);
 
         /// <summary>A row of paper cards, the chosen one a vermilion block (e.g. Sword &amp; Shield | Greatsword). Returns the chosen index.</summary>
         public static int PaperOptions(Rect rect, int selected, string[] options, bool enabled = true)
@@ -241,12 +246,14 @@ namespace Beast.Gameplay
             {
                 var cell = new Rect(rect.x + i * (width + gap), rect.y, width, rect.height);
                 bool chosen = i == selected;
+                bool focused = enabled && NavControl(cell);
                 bool hovered = enabled && cell.Contains(Event.current.mousePosition);
                 PaperCard(cell, chosen);
                 if (hovered && !chosen) Fill(new Rect(cell.x, cell.yMax - 3f, cell.width, 3f), Vermilion);
+                DrawFocus(cell, focused);
                 paperOption.normal.textColor = chosen ? OffWhite : Ink;
                 GUI.Label(cell, options[i], paperOption);
-                if (enabled && Click(GUI.Button(cell, GUIContent.none, GUIStyle.none))) selected = i;
+                if (enabled && Click(GUI.Button(cell, GUIContent.none, GUIStyle.none) | NavPressed(cell, focused))) selected = i;
             }
             GUI.color = old;
             return selected;
@@ -256,12 +263,17 @@ namespace Beast.Gameplay
         public static int PaperStepper(Rect rect, int index, int count, string text, bool enabled = true)
         {
             const float arrow = 46f;
-            if (BrushButton(new Rect(rect.x, rect.y, arrow, rect.height), "‹", enabled && index > 0)) index--;
+            if (BrushButton(new Rect(rect.x, rect.y, arrow, rect.height), "‹", enabled && index > 0, false, navigable: false)) index--;
             var middle = new Rect(rect.x + arrow + 6f, rect.y, rect.width - 2f * (arrow + 6f), rect.height);
+            // With a pad the middle card is the control: left / right step through the values.
+            bool focused = enabled && NavControl(middle, adjustable: true);
+            int step = NavAdjust(focused);
+            if (step != 0 && index + step >= 0 && index + step < count) { index += step; Click(true); }
             PaperCard(middle, false);
+            DrawFocus(middle, focused);
             paperOption.normal.textColor = Ink;
             GUI.Label(middle, text, paperOption);
-            if (BrushButton(new Rect(rect.xMax - arrow, rect.y, arrow, rect.height), "›", enabled && index < count - 1)) index++;
+            if (BrushButton(new Rect(rect.xMax - arrow, rect.y, arrow, rect.height), "›", enabled && index < count - 1, false, navigable: false)) index++;
             return Mathf.Clamp(index, 0, Mathf.Max(0, count - 1));
         }
 
@@ -271,6 +283,13 @@ namespace Beast.Gameplay
             int id = GUIUtility.GetControlID(FocusType.Passive, rect);
             var evt = Event.current;
             var track = new Rect(rect.x + 8f, rect.center.y - 2f, rect.width - 16f, 4f);
+            bool focused = enabled && NavControl(rect, adjustable: true);
+            int nudge = NavAdjust(focused);
+            if (nudge != 0)
+            {
+                value = Mathf.Clamp(value + nudge * (step > 0f ? step : (max - min) / 20f), min, max);
+                GUI.changed = true;
+            }
             float t = Mathf.InverseLerp(min, max, value);
             if (enabled)
             {
@@ -302,12 +321,13 @@ namespace Beast.Gameplay
                 float alpha = enabled ? 1f : 0.4f;
                 Fill(track, new Color(Ink.r, Ink.g, Ink.b, 0.25f * alpha));
                 Fill(new Rect(track.x, track.y, track.width * t, track.height), new Color(Vermilion.r, Vermilion.g, Vermilion.b, alpha));
-                bool active = GUIUtility.hotControl == id || (enabled && rect.Contains(evt.mousePosition));
+                bool active = GUIUtility.hotControl == id || (enabled && rect.Contains(evt.mousePosition)) || (focused && NavShowing);
                 var thumb = new Rect(track.x + track.width * t - 7f, rect.center.y - 12f, 14f, 24f);
                 var old = GUI.color;
                 GUI.color = new Color(1f, 1f, 1f, alpha);
                 SlicedWith(thumb, active ? redBlockTex : inkBlockTex, BlockBorder);
                 GUI.color = old;
+                DrawFocus(rect, focused);
             }
             return value;
         }
@@ -316,8 +336,10 @@ namespace Beast.Gameplay
         public static bool PaperToggle(Rect rect, bool value, string label = null)
         {
             var box = new Rect(rect.x, rect.center.y - 13f, 26f, 26f);
+            bool focused = NavControl(rect);
             bool hovered = rect.Contains(Event.current.mousePosition);
             PaperCard(box, false);
+            DrawFocus(box, focused);
             if (hovered) Fill(new Rect(box.x, box.yMax - 2f, box.width, 2f), Vermilion);
             if (value) DrawIcon(new Rect(box.x + 4f, box.y + 4f, 18f, 18f), CheckIcon, Vermilion, flipY: true);
             if (!string.IsNullOrEmpty(label))
@@ -327,7 +349,7 @@ namespace Beast.Gameplay
                 GUI.Label(new Rect(box.xMax + 12f, rect.y, rect.width - 38f, rect.height), label, paperOption);
                 paperOption.alignment = TextAnchor.MiddleCenter;
             }
-            if (Click(GUI.Button(rect, GUIContent.none, GUIStyle.none))) value = !value;
+            if (Click(GUI.Button(rect, GUIContent.none, GUIStyle.none) | NavPressed(rect, focused))) value = !value;
             return value;
         }
 
@@ -343,7 +365,7 @@ namespace Beast.Gameplay
             float x = rightX;
             for (int i = hints.Length - 1; i >= 0; i--)
             {
-                var key = new GUIContent($"[{hints[i].key}]");
+                var key = new GUIContent($"[{KeyLabel(hints[i].key)}]");
                 var label = new GUIContent(hints[i].label);
                 float labelWidth = keyHintLabel.CalcSize(label).x;
                 float keyWidth = keyHintKey.CalcSize(key).x;
@@ -496,9 +518,11 @@ namespace Beast.Gameplay
         /// </summary>
         public static bool FilterCard(Rect rect, string title, string count, string subtitle, bool selected)
         {
+            bool focused = NavControl(rect);
             bool hovered = !selected && rect.Contains(Event.current.mousePosition);
             PaperCard(rect, selected);
             if (hovered) Fill(new Rect(rect.x + 1f, rect.yMax - 3f, rect.width - 2f, 3f), Vermilion);
+            DrawFocus(rect, focused);
             var titleStyle = cardTitle;
             titleStyle.normal.textColor = selected ? OffWhite : Ink;
             float titleY = string.IsNullOrEmpty(subtitle) ? rect.y : rect.y + 8f;
@@ -514,7 +538,7 @@ namespace Beast.Gameplay
                 cardSubtitle.normal.textColor = selected ? OffWhite : MutedOnPaper;
                 GUI.Label(new Rect(rect.x + 18f, rect.y + 40f, rect.width - 36f, rect.height - 46f), subtitle, cardSubtitle);
             }
-            return PaperClick(rect);
+            return Click(GUI.Button(rect, GUIContent.none, GUIStyle.none) | NavPressed(rect, focused));
         }
 
         // ---------- Drawing helpers ----------

@@ -32,6 +32,21 @@ namespace Beast.Gameplay
         [Tooltip("Never chase further than this from home; then walk back and heal.")]
         public float LeashRange = 22f;
 
+        [Header("Ranged (archers)")]
+        [Tooltip("Shoots arrows instead of using melee attacks.")]
+        public bool Ranged;
+        [Tooltip("Shoots from up to this far (m), with a clear line of sight.")]
+        public float ShootRange = 16f;
+        [Tooltip("Tries to stay about this far away (m): backs off when you close in.")]
+        public float PreferredDistance = 9f;
+        [Tooltip("Seconds spent drawing the bow before loosing (the warning).")]
+        public float DrawTime = 0.9f;
+        [Tooltip("Seconds between shots.")]
+        public float ShotCooldown = 2.6f;
+        public float ArrowSpeed = 22f;
+        public float ArrowDamage = 14f;
+        public float ArrowPoiseDamage = 12f;
+
         [Header("Night (bolder after dark)")]
         [Tooltip("Extra damage at night (0.3 = +30%).")]
         public float NightDamageBonus = 0.3f;

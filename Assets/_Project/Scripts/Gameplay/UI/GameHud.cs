@@ -50,6 +50,8 @@ namespace Beast.Gameplay
         PlayerInteractor interactor;
         PlayerClimber climber;
         PlayerFatigue fatigue;
+        PlayerBuffs buffs;
+        PlayerAppearance appearance;
         WeatherSystem weather;
         DayNightCycle dayNight;
 
@@ -102,6 +104,8 @@ namespace Beast.Gameplay
             interactor = player.GetComponent<PlayerInteractor>();
             climber = player.GetComponent<PlayerClimber>();
             fatigue = player.GetComponent<PlayerFatigue>();
+            buffs = player.GetComponent<PlayerBuffs>();
+            appearance = player.GetComponent<PlayerAppearance>();
         }
 
         // ---------- Notifications ----------
@@ -163,13 +167,28 @@ namespace Beast.Gameplay
             float y = UITheme.Height - 78f;
 
             if (combat != null && combat.Class != null && combat.Moveset != null)
-                UITheme.ShadowLabel(new Rect(x, y - 26f, width, 22f),
-                    $"{UITheme.Spaced(combat.Class.DisplayName)}   <color={UITheme.MutedOnInkHex}>{combat.Moveset.DisplayName}</color>", UITheme.Small, UITheme.OffWhite);
+                UITheme.ShadowLabel(new Rect(x, y - 26f, width, 22f), appearance != null
+                        ? $"{UITheme.Spaced(appearance.PlayerName)}   <color={UITheme.MutedOnInkHex}>{combat.Class.DisplayName} · {combat.Moveset.DisplayName}</color>"
+                        : $"{UITheme.Spaced(combat.Class.DisplayName)}   <color={UITheme.MutedOnInkHex}>{combat.Moveset.DisplayName}</color>",
+                    UITheme.Small, UITheme.OffWhite);
             if (fatigue != null && fatigue.Level != FatigueLevel.Rested)
             {
                 bool exhausted = fatigue.Level == FatigueLevel.Exhausted;
                 UITheme.ShadowLabel(new Rect(x, y + 36f, width, 22f), UITheme.Spaced(exhausted ? "Exhausted" : "Tired"), UITheme.SmallCenter,
                     exhausted ? UITheme.Vermilion : UITheme.InkGold);
+            }
+
+            // Food and potion buffs, bottom-left of the bars: "+10% Attack 2:41".
+            if (buffs != null && buffs.Buffs.Count > 0)
+            {
+                var line = new System.Text.StringBuilder();
+                foreach (var buff in buffs.Buffs)
+                {
+                    if (line.Length > 0) line.Append("   ");
+                    int seconds = Mathf.CeilToInt(buff.Remaining);
+                    line.Append($"{buff.Source.Buff} <color={UITheme.MutedOnInkHex}>{seconds / 60}:{seconds % 60:00}</color>");
+                }
+                UITheme.ShadowLabel(new Rect(x, y + 36f, width, 22f), line.ToString(), UITheme.Small, UITheme.InkGold);
             }
 
             // Thin bars on an ink track (Tsushima-style): health in vermilion, stamina and poise below it.
@@ -237,7 +256,8 @@ namespace Beast.Gameplay
             }
 
             // Key cap in the corner, caption underneath.
-            var keyRect = new Rect(rect.x - 6f, rect.y - 8f, 24f, 22f);
+            key = UITheme.KeyLabel(key);
+            var keyRect = new Rect(rect.x - 6f, rect.y - 8f, Mathf.Max(24f, UITheme.KeyStyle.CalcSize(new GUIContent(key)).x + 8f), 22f);
             UITheme.KeyCap(keyRect);
             GUI.Label(keyRect, key, UITheme.KeyStyle);
             var captionRect = new Rect(rect.x - SlotGap * 0.5f + 1f, rect.yMax + 3f, rect.width + SlotGap - 2f, 20f);
@@ -347,6 +367,13 @@ namespace Beast.Gameplay
         {
             float x = 18f;
             float y = UITheme.Height - 40f;
+            if (UITheme.UsingGamepad)
+            {
+                // The pad opens the game menu on View (then LB / RB for the tabs) and Options on Start.
+                x += UITheme.KeyHint(x, y, "Start", "Options", 0.85f);
+                UITheme.KeyHint(x, y, "View", "Bag · Character · Journal · Map", 0.85f);
+                return;
+            }
             x += UITheme.KeyHint(x, y, "Esc", "Menu", 0.85f);
             x += UITheme.KeyHint(x, y, "Tab", "Bag", 0.85f);
             x += UITheme.KeyHint(x, y, "C", "Character", 0.85f);

@@ -262,6 +262,7 @@ namespace Beast.Gameplay
         /// <summary>Draws a keyboard key cap ("F": an ink chip, off-white letter) followed by a label; returns the width used.</summary>
         public static float KeyHint(float x, float y, string key, string label, float alpha = 1f)
         {
+            key = KeyLabel(key);
             var old = GUI.color;
             GUI.color = new Color(1f, 1f, 1f, alpha);
             float keyWidth = Mathf.Max(26f, KeyStyle.CalcSize(new GUIContent(key)).x + 12f);

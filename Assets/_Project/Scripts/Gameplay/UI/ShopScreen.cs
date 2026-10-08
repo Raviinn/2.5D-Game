@@ -89,7 +89,7 @@ namespace Beast.Gameplay
             GUI.Label(new Rect(area.x, area.y, area.width, 34f), UITheme.Spaced("Buy"), UITheme.InkHeader);
             var view = new Rect(area.x, area.y + 44f, area.width, area.height - 44f);
             var content = new Rect(0f, 0f, view.width - 18f, Mathf.Max(1, shop.StockCount) * (RowHeight + 8f));
-            buyScroll = GUI.BeginScrollView(view, buyScroll, content);
+            buyScroll = UITheme.BeginScroll(view, buyScroll, content);
 
             for (int i = 0; i < shop.StockCount; i++)
             {
@@ -108,7 +108,7 @@ namespace Beast.Gameplay
                 if (UITheme.BrushButton(new Rect(row.xMax - 196f, row.y + 16f, 110f, 46f), "Buy", canBuy)) Buy(i, 1);
                 if (UITheme.BrushButton(new Rect(row.xMax - 78f, row.y + 16f, 66f, 46f), "×5", canBuy)) Buy(i, 5);
             }
-            GUI.EndScrollView();
+            UITheme.EndScroll(ref buyScroll, view);
         }
 
         void Buy(int index, int times)
@@ -141,7 +141,7 @@ namespace Beast.Gameplay
 
             var view = new Rect(area.x, area.y + 44f, area.width, area.height - 44f);
             var content = new Rect(0f, 0f, view.width - 18f, Mathf.Max(1, sellable.Count) * (RowHeight + 8f));
-            sellScroll = GUI.BeginScrollView(view, sellScroll, content);
+            sellScroll = UITheme.BeginScroll(view, sellScroll, content);
 
             if (sellable.Count == 0)
                 GUI.Label(new Rect(4f, 4f, content.width - 8f, 48f), "You have nothing this merchant wants.", UITheme.PaperMuted);
@@ -160,7 +160,7 @@ namespace Beast.Gameplay
                 if (UITheme.BrushButton(new Rect(row.xMax - 196f, row.y + 16f, 110f, 46f), "Sell")) Sell(item, 1);
                 if (UITheme.BrushButton(new Rect(row.xMax - 78f, row.y + 16f, 66f, 46f), "All")) Sell(item, count);
             }
-            GUI.EndScrollView();
+            UITheme.EndScroll(ref sellScroll, view);
         }
 
         void Sell(ItemData item, int amount)

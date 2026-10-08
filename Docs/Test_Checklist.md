@@ -1,4 +1,4 @@
-# Full Test Checklist — Milestones 1 → 21 (+ QA fixes)
+# Full Test Checklist — Milestones 1 → 35 (+ QA fixes)
 
 **Build under test:** Unity project `Beast`, everything through Milestone 4e (Dialogue & Quests), plus the polish pass (new UI theme, HUD, pause menu, environment art — setup menu "Milestone 9") light reputation (setup menu "Milestone 10") climbing & ledges (setup menu "Milestone 11") per-pixel sprite shadows (setup menu "Milestone 12") smarter enemies (setup menu "Milestone 13") day/night & weather (setup menu "Milestone 14") night danger & fatigue (setup menu "Milestone 15") and the main menu & save slots (setup menu "Milestone 16").
 **Format:** each line is **Action → Expected result**. Tick it only if the expected result happens **and the Console shows no new red errors or yellow warnings**.
@@ -12,8 +12,8 @@ If something fails, note it with the bug template at the bottom.
 - [ ] **Game view:** turn on **Gizmos** (top-right of the Game view) to see hitboxes.
 - [ ] **Fresh saves:** close Play Mode and delete the folder `%USERPROFILE%\AppData\LocalLow\DefaultCompany\Beast\saves` (paste the path into Explorer). This rules out old saves causing false bugs.
 - [ ] **Ink package:** after Unity recompiles, **Window → Package Manager → In Project** lists **Ink** (2.0.0). If it failed to install, make sure Git is installed and restart Unity.
-- [ ] **Setup menus:** run all of these once, in order: **Beast → Setup → Milestone 1 … Milestone 16**. Each ends with a "… setup complete" line → no errors in the Console. (Milestone 9 adds the environment art; it takes a few seconds.)
-- [ ] **Re-run safety:** run **Milestone 7** to **16 Setup** a second time each → they say things were "kept as-is", repaired or rebuilt. There are no duplicate NPCs, enemies, boards, UI objects, roofs or trees in the Hierarchy, and no errors.
+- [ ] **Setup menus:** run all of these once, in order: **Beast → Setup → Milestone 1 … Milestone 33** (24–33 skip the numbers that have no setup). Each ends with a "… setup complete" line → no errors in the Console. (Milestone 9 adds the environment art; it takes a few seconds.)
+- [ ] **Re-run safety:** run **Milestone 7** to **33 Setup** a second time each → they say things were "kept as-is", repaired or rebuilt. There are no duplicate NPCs, enemies, boards, UI objects, roofs or trees in the Hierarchy, and no errors.
 - [ ] **Beast → Dialogue → Compile Ink Story** → "Compiled Assets/_Project/Dialogue/Main.json", with no [Ink] errors.
 - [ ] **Database:** run **Beast → Data → Rebuild Game Database** → "Rebuilt with N entries", with **no "Duplicate Id" errors**.
 - [ ] **Inspector check:** select **Player**. Player Combat → Class Data = `Class_Knight`; Player Progression → Config = `ProgressionConfig`; Player Equipment → both starting weapons and the Gambeson are set.
@@ -636,6 +636,121 @@ Go to the dark 6×6 field southeast of the spawn.
 - [ ] Get defeated → "D E F E A T E D" in red. Sleep → "D A Y  N" fades in and out.
 - [ ] A quest banner while the menu is open shows as a slim strip just under the black bar.
 - [ ] Title screen → **Settings** → a parchment window with the four categories as cards along the top, Reset to defaults and Back as brush buttons.
+
+## 13r. Fall Damage & Climbing Down (Milestone 24)
+
+Run **Beast → Setup → Run Milestone 24 Setup (Fall Damage & Climbing Down)** first → "Milestone 24 setup complete". A 10 m ivy tower now stands on the climbing course, just south of the ivy cliff.
+
+- [ ] Climb onto the 3.2 m ledge wall, walk to its east edge (the side with the wooden lip) and stop, facing the drop → **[Space] Climb down** shows.
+- [ ] Press **Space** → you step over the edge, turn and hang from it. Shimmy, pull up and let go all work as usual.
+- [ ] On top of the ivy cliff, stop at its edge facing the ledge wall below → **Space** puts you on the ivy. Hold **S** → you climb down and step off onto the wall top. No damage.
+- [ ] On the 1.4 m block, stop at the edge → no Climb down prompt (too low to hang from).
+- [ ] Holding a direction at an edge and pressing Space still jumps as usual.
+- [ ] Walk off the 3.2 m wall → no damage. Jump off the 6 m cliff → a little damage at most (the jump's arc adds height).
+- [ ] Climb the 10 m tower, then walk off → you lose about a third of your health, the hit number shows, the camera shakes, a heavy thud plays and you're stunned for a moment.
+- [ ] Climb down the tower instead (ivy all the way) → no damage.
+- [ ] Jump off the tower and grab the ledge wall or the cliff on the way down → the fall restarts from the grab, so landing from there is harmless.
+- [ ] Get defeated by a fall (e.g. walk off the tower with low health) → normal defeat and respawn, with no extra damage after respawning.
+- [ ] Save on top of the tower, walk off, and load the save (F9) while still falling → you are back on the tower with no damage.
+
+## 13s. Archers & Jump Links (Milestone 25)
+
+Run **Beast → Setup → Run Milestone 25 Setup (Archers & Jump Links)** first → "Milestone 25 setup complete". A green-clad **Bandit Archer** now stands at the bandit camp.
+
+- [ ] Pull a Bandit to the climbing course and stand on the **2.3 m block** → it vaults up after you and attacks.
+- [ ] Stand on the **1.4 m block** → same.
+- [ ] Stand on the **3.2 m wall** → melee Bandits wait below and give up after a few seconds (too high to vault).
+- [ ] Drop off the wall while a Bandit is on top of a block → it jumps down after you.
+- [ ] Approach the camp → the archer keeps ~9 m away; walk at it and it backs off.
+- [ ] The archer flashes red while drawing, then an arrow flies in a slight arc. Sidestep during the draw → the arrow misses.
+- [ ] Block facing the archer → the arrow is blocked (reduced damage, stamina used). Dodge through it → no damage.
+- [ ] Hang or climb within sight of the archer → arrows hit you and knock you off ("Knocked off!").
+- [ ] Hide behind a house → the archer walks round until it can see you again.
+- [ ] Kill the archer → it drops loot like a Bandit and gives Combat XP. It respawns like the others.
+- [ ] At night the archer's arrows hit harder (like other Bandits).
+
+## 13t. Crafting (Milestone 26)
+
+Run **Beast → Setup → Run Milestone 26 Setup (Crafting)** first → "Milestone 26 crafting setup complete". A workbench (a wooden table with a little anvil and pot) now stands beside your bed.
+
+- [ ] Walk up to the workbench → **[E] Use workbench**. Press E → the **Workbench** window opens on parchment and the game pauses.
+- [ ] Three cards on the left: **Alchemy, Cooking, Smithing**. The number on each is how many recipes you can make right now (out of how many).
+- [ ] Each recipe row shows the result's icon and name, what it needs (short items in red), and what it does.
+- [ ] Harvest Healroot, then **Craft** a Healing Draught → 2 Healroot gone, +1 draught, a pouring sound and "Made Healing Draught." With too little Healroot the button is greyed.
+- [ ] **×5** makes as many as you can, up to 5, and reports how many.
+- [ ] Cook a **Turnip Stew** and eat it → healed, and "+15 Defense 3:00" counts down under the health bar. The Character screen shows the higher Defense. It disappears when the time runs out.
+- [ ] Drink a **Stamina Tonic** → stamina refills and a "+30% Stamina Regen" countdown shows.
+- [ ] With the Rusted Sword & Shield **equipped**, 6 Iron Scrap and 2 Bandit Cloth → **Smithing → Iron Sword & Shield**: the ingredient line says "(equipped)". Craft → a clang, and you're now holding the Iron Sword & Shield (same slot, still equipped). The rusted one is gone.
+- [ ] Padded Cap from 4 cloth goes into the bag; Iron Helm from a Padded Cap you're wearing upgrades it in place.
+- [ ] **Esc** closes the window and the game resumes.
+- [ ] Save, quit, load → crafted items are still there. Active food buffs end on load (by design).
+
+## 13u. Storage Chest (Milestone 27)
+
+Run **Beast → Setup → Run Milestone 27 Setup (Storage Chest)** first (after Milestone 26) → "Milestone 27 storage setup complete". A wooden chest with iron bands now stands beside your bed.
+
+- [ ] Walk up to the chest → **[E] Open storage chest** → the chest window opens and the game pauses. The top right shows how full the bag and chest are.
+- [ ] **Store** moves one, **All** moves the whole stack; **Take / All** on the chest side bring things back. No "+N item" notices pop up while moving.
+- [ ] **Store crops, seeds & materials** → all crops, seeds and materials go into the chest; food, potions and gear stay in the bag.
+- [ ] With Healroot only in the chest, open the workbench → the Healing Draught row says "(chest)" and can be crafted; the Healroot comes out of the chest.
+- [ ] Fill your bag, then Take → "Your bag is full."
+- [ ] Save, quit to the menu, load → the chest still holds the same things. A new game starts with an empty chest.
+
+## 13v. Names & the Mirror (Milestone 28)
+
+Run **Beast → Setup → Run Milestone 28 Setup (Names & Mirror)** first → "Milestone 28 names & mirror setup complete … Ink story recompiled". A standing mirror now stands near your bed.
+
+- [ ] New Game → the creator has a **Name** field at the top showing "Wanderer (type a name)". Click it and type a name → it appears; digits and symbols are ignored; it stops at 16 letters.
+- [ ] Randomise changes the look but keeps the name.
+- [ ] Begin your journey → the name shows in spaced capitals above the health bar (e.g. "E D D A   Knight · Sword & Shield").
+- [ ] Character screen → Gear view: the name under your figure.
+- [ ] Save, quit to title → Load Game: the slot card's details start with the name.
+- [ ] A new game with the name left empty → you're "Wanderer".
+- [ ] Walk to the mirror → **[E] Change your look** → "The mirror" window with your current look and name, holding your current weapon.
+- [ ] Type a name containing I, C or J → the window stays open (those keys don't close it).
+- [ ] Change the hair and name → **Keep this look** → your sprite changes, "You are now …" shows, the HUD name updates.
+- [ ] Open it again, change things, then **Cancel** (or Esc) → nothing changes.
+- [ ] Save and load → the new look and name are kept.
+
+## 13w. NPC Schedules (Milestone 31)
+
+Run **Beast → Setup → Run Milestone 31 Setup (NPC Schedules)** first → "Milestone 31 NPC schedules setup complete". An empty `[NPC Places]` object holds their spots.
+
+- [ ] In the morning Oswin is at his stall and Brenna at her forge, as before.
+- [ ] Around 12:00 (F2 skips an hour) Oswin walks to the well — a slow walking animation along the paths, around houses, not through them. He goes back to the stall at 13:00.
+- [ ] At 13:00 Brenna walks to the contract board and reads it; at 14:00 she's back at the forge.
+- [ ] Stand right next to someone who is walking → they stop and wait; talk to them as usual (Oswin's shop still opens). Step away → they carry on.
+- [ ] Evening: both stand by the well.
+- [ ] After 22:30 both have gone home: no sprites, no "!" / "?" markers, no minimap dots, no Talk prompt at their doors.
+- [ ] Sleep in your bed → at 06:00 they're back at work straight away.
+- [ ] Save at night, load → they're still at home; save at noon, load → Oswin is at the well.
+
+## 13x. Music (Milestone 33)
+
+Run **Beast → Setup → Run Milestone 33 Setup (Music)** first → "Milestone 33 music complete: 4 track(s) written".
+
+- [ ] Title screen → a slow, calm tune (drone, harp, later a flute).
+- [ ] Start or continue a game → it crossfades to the day tune (lute and flute) over a couple of seconds.
+- [ ] Past 20:00 (F2 skips hours) → the night tune (quiet, sparse).
+- [ ] Get a Bandit to chase you → within a second or so the combat music (drum, fast strings) takes over. Kill it or run → about 5 s later the day or night tune comes back.
+- [ ] Hitting the Training Dummy doesn't start combat music.
+- [ ] Open the menu (Tab) or pause (Esc) → the music gets quieter; close it → back to full.
+- [ ] Settings → Audio → **Music** at 0% → silent; back up → it returns. Master volume still affects it.
+- [ ] Loops: listen across a loop's end (60 s) — no click or gap.
+
+## 13y. Controller Navigation (Milestone 35)
+
+No setup needed. Plug in a gamepad (Xbox-style layout assumed for the labels).
+
+- [ ] Title screen: press the D-pad → nothing moves, but the swash marks the focused item. Press again → it moves; **A** chooses; **B** goes back from New Game / Load Game / Settings.
+- [ ] Creator: the D-pad moves an ink-gold frame between controls; left / right on Hair or Outfit steps through them; on a colour swatch row, left / right move between colours and A picks one; **Random** gives a name.
+- [ ] Settings (title and Options tab): sliders move with left / right; toggles flip with A; lists scroll to keep the focus visible.
+- [ ] In game: **View** opens the bag; LB / RB switch tabs; B closes. In the bag the focused slot's details show; A uses or equips.
+- [ ] Character screen: skills and gear slots can be reached and chosen with the D-pad and A.
+- [ ] Shop, contract board, workbench, chest and mirror: everything reachable with the D-pad; A buys / crafts / stores / accepts; B leaves.
+- [ ] While using the pad, hints show pad buttons ([A] [B] [LB / RB], RB / RT / ↓ / → on the action slots, ↑ for interact). Touch the keyboard or mouse → they switch back.
+- [ ] Moving the mouse hides the focus frame; the mouse still works everywhere as before.
+- [ ] Keyboard only: arrow keys + Enter navigate the same way (W / S still move the title menu; typing a name isn't interrupted).
 
 ---
 

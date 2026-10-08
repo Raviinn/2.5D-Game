@@ -128,6 +128,17 @@ namespace Beast.Gameplay
             return Report(info, damage, IsDead ? HitResult.Killed : HitResult.Hit);
         }
 
+        /// <summary>
+        /// Damage from the world (falls): can't be blocked or dodged, and Defense doesn't reduce it.
+        /// Reported like a hit with no attacker, so damage numbers and sounds still show.
+        /// </summary>
+        public HitResult ReceiveWorldDamage(float amount)
+        {
+            if (IsDead || amount <= 0f) return HitResult.Ignored;
+            ApplyDamage(amount);
+            return Report(default, amount, IsDead ? HitResult.Killed : HitResult.Hit);
+        }
+
         public void Heal(float amount)
         {
             if (IsDead || amount <= 0f) return;

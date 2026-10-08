@@ -10,7 +10,10 @@ $runs = @(
     @{ flag = "-menuharness"; tag = "\[MenuTest\]"; name = "menu"; timeout = 400 },
     @{ flag = "-settingsharness"; tag = "\[SettingsTest\]"; name = "settings"; timeout = 400 },
     @{ flag = "-lookharness"; tag = "\[LookTest\]"; name = "look"; timeout = 400 },
-    @{ flag = "-styleharness"; tag = "\[StyleTest\]"; name = "style"; timeout = 300 }
+    @{ flag = "-styleharness"; tag = "\[StyleTest\]"; name = "style"; timeout = 300 },
+    @{ flag = "-craftharness"; tag = "\[CraftTest\]"; name = "craft"; timeout = 300 },
+    @{ flag = "-townharness"; tag = "\[TownTest\]"; name = "town"; timeout = 300 },
+    @{ flag = "-padharness"; tag = "\[PadTest\]"; name = "pad"; timeout = 300 }
 )
 foreach ($r in $runs) {
     if ($Only -and ($Only -notcontains $r.name)) { continue }

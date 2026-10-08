@@ -17,6 +17,13 @@ public static class BuildHarness
         Beast.EditorTools.ItemIconsSetup.Run();
         Beast.EditorTools.CharacterLookSetup.Run();
         Beast.EditorTools.AudioSetup.Run();
+        Beast.EditorTools.FallDamageSetup.Run();
+        Beast.EditorTools.ArcherSetup.Run();
+        Beast.EditorTools.CraftingSetup.Run();
+        Beast.EditorTools.StorageSetup.Run();
+        Beast.EditorTools.MirrorSetup.Run();
+        Beast.EditorTools.NpcScheduleSetup.Run();
+        Beast.EditorTools.MusicSetup.Run();
 
         PlayerSettings.runInBackground = true; // unattended runs must not pause when the window loses focus
         PlayerSettings.productName = "BeastHarness"; // separate save folder: never touches the real game's saves

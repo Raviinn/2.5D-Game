@@ -151,7 +151,7 @@ namespace Beast.Gameplay
                 UITheme.PaperCard(rect, isSelected);
                 var chip = new Rect(rect.x + 10f, rect.y + 9f, 24f, 24f);
                 UITheme.KeyCap(chip);
-                GUI.Label(chip, (i + 1).ToString(), UITheme.KeyStyle);
+                GUI.Label(chip, UITheme.UsingGamepad ? (isSelected ? "A" : "") : (i + 1).ToString(), UITheme.KeyStyle);
                 choiceStyle.normal.textColor = isSelected ? UITheme.OffWhite : UITheme.Ink;
                 GUI.Label(new Rect(rect.x + 48f, rect.y, rect.width - 58f, rect.height), runner.Choices[i], choiceStyle);
             }

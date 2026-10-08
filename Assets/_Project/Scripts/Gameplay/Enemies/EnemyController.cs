@@ -13,6 +13,9 @@ namespace Beast.Gameplay
     /// - Can't reach you (you climbed a wall)? Waits at the closest spot, then gives up and walks home.
     /// - Never strays further than LeashRange from home; walking home ignores the player and heals on arrival.
     /// - Bolder at night (DayNightCycle): hits harder, spots you from further away, moves faster, drops more.
+    /// - Archers (EnemyData.Ranged): keep their distance, draw (the telegraph) and loose arrows whenever they can see
+    ///   you, climbing or not; they don't take melee turns, and only give up when they can neither see nor reach you.
+    /// - Follows you up low walls and down drops along WorldNavigation's jump links (vaulting up, dropping down).
     /// </summary>
     [RequireComponent(typeof(CharacterController), typeof(Combatant))]
     public sealed class EnemyController : MonoBehaviour, ICharacterAnimationSource
@@ -26,12 +29,13 @@ namespace Beast.Gameplay
         const float TurnRest = 0.6f;            // a turn ends this long after the swing finishes
         const float Separation = 1.4f;          // enemies keep this far apart
         const float MaxAttackHeight = 1.2f;     // can't hit a player standing on something taller than this
+        const float SightInterval = 0.2f;
 
         [SerializeField] EnemyData data;
         [SerializeField] float gravity = -25f;
         [SerializeField, Tooltip("Lunges stop this far from the player.")] float lungeStopDistance = 1.2f;
 
-        enum State { Idle, Chase, Attack, Return, Staggered, Dead }
+        enum State { Idle, Chase, Attack, Return, Staggered, Dead, Vault }
 
         CharacterController controller;
         Combatant combatant;
@@ -61,6 +65,16 @@ namespace Beast.Gameplay
         bool playerReachable = true;
         float unreachableTime;
 
+        // Archers
+        AttackData shot;
+        bool canSee;
+        float nextSightCheck;
+
+        // Vaulting up a jump link
+        Vector3 vaultFrom, vaultMid, vaultTo;
+        float vaultTime, vaultDuration;
+        State afterVault;
+
         // Turn-taking
         float tokenTakenAt;
         float tokenReleaseAt = -1f;
@@ -78,6 +92,9 @@ namespace Beast.Gameplay
         public bool PlayerReachable => playerReachable;
         /// <summary>Night: tougher and more alert (see EnemyData's Night settings). Training dummies never are.</summary>
         public bool Emboldened { get; private set; }
+        /// <summary>Archers: true while the last check had a clear line of sight to the player.</summary>
+        public bool CanSeePlayer => canSee;
+        public bool IsVaulting => state == State.Vault;
         float AggroRange => data.AggroRange * (Emboldened ? 1f + data.NightAggroBonus : 1f);
         float MoveSpeed => data.MoveSpeed * (Emboldened ? 1f + data.NightSpeedBonus : 1f);
 
@@ -85,7 +102,7 @@ namespace Beast.Gameplay
             state == State.Dead ? CharacterAnim.Dead :
             state == State.Staggered ? CharacterAnim.Hurt :
             attacks != null && attacks.IsAttacking ? CharacterAnim.Attack :
-            planarSpeed > 0.2f ? CharacterAnim.Run :
+            state == State.Vault || planarSpeed > 0.2f ? CharacterAnim.Run :
             CharacterAnim.Idle;
 
         public float AnimationSpeed =>
@@ -115,6 +132,24 @@ namespace Beast.Gameplay
             spawnRotation = transform.rotation;
             cooldown = data.AttackCooldown;
             strafeSign = Random.value < 0.5f ? -1f : 1f;
+
+            if (data.Ranged)
+            {
+                // The draw is an "attack" with no hitbox: the sprite and the telegraph follow its timing, and the
+                // arrow is loosed as the wind-up ends.
+                shot = ScriptableObject.CreateInstance<AttackData>();
+                shot.name = "Bow shot";
+                shot.Startup = data.DrawTime;
+                shot.Active = 0.05f;
+                shot.Recovery = 0.45f;
+                shot.Lunge = 0f;
+                shot.HitboxSize = Vector3.zero;
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (shot != null) Destroy(shot);
         }
 
         void OnEnable()
@@ -144,6 +179,7 @@ namespace Beast.Gameplay
             if (dt <= 0f) return;
             if (state == State.Dead) { UpdateDead(dt); return; }
             UpdateNight();
+            if (state == State.Vault) { UpdateVault(dt); return; }
 
             Vector3 displacement = combatant.ConsumeKnockback(dt);
 
@@ -180,6 +216,8 @@ namespace Beast.Gameplay
             if (makeHome) spawnPosition = position;
             cornerCount = 0;
             nextRepath = 0f;
+            canSee = false;
+            nextSightCheck = 0f;
         }
 
         void UpdateNight()
@@ -200,11 +238,13 @@ namespace Beast.Gameplay
             if (attacks.IsAttacking)
             {
                 // Track the player during the wind-up only, so a late sidestep dodges the swing.
-                if (attacks.CurrentPhase == AttackExecutor.Phase.Startup) FacePlayer(dt, 0.5f);
+                bool drawing = attacks.CurrentPhase == AttackExecutor.Phase.Startup;
+                if (drawing) FacePlayer(dt, data.Ranged ? 1f : 0.5f);
                 Vector3 lunge = attacks.Tick(dt);
+                if (data.Ranged && drawing && attacks.CurrentPhase != AttackExecutor.Phase.Startup) Loose();
                 if (!attacks.IsAttacking)
                 {
-                    cooldown = data.AttackCooldown;
+                    cooldown = data.Ranged ? data.ShotCooldown : data.AttackCooldown;
                     state = State.Chase;
                     tokenReleaseAt = Time.time + TurnRest;
                 }
@@ -234,12 +274,14 @@ namespace Beast.Gameplay
 
             // Chasing.
             CheckReachable();
-            unreachableTime = playerReachable ? 0f : unreachableTime + dt;
+            if (data.Ranged) CheckSight();
+            unreachableTime = playerReachable || (data.Ranged && canSee) ? 0f : unreachableTime + dt;
             if (distance > AggroRange * 1.5f || Flat(transform.position - spawnPosition).magnitude > data.LeashRange ||
                 unreachableTime > data.GiveUpAfter)
                 return GoHome();
 
             FacePlayer(dt, 1f);
+            if (data.Ranged) return ThinkRanged(toPlayer, distance, dt);
             float heightGap = Mathf.Abs(player.transform.position.y - transform.position.y);
 
             bool hasTurn = EnemyDirector.HasToken(this);
@@ -277,6 +319,63 @@ namespace Beast.Gameplay
             return move + SeparationPush(dt);
         }
 
+        // ---------- Archers ----------
+
+        Vector3 ThinkRanged(Vector3 toPlayer, float distance, float dt)
+        {
+            if (canSee && distance <= data.ShootRange && cooldown <= 0f && Vector3.Angle(transform.forward, toPlayer) < 20f)
+            {
+                attacks.Begin(shot, 0f);
+                state = State.Attack;
+                return Vector3.zero;
+            }
+
+            Vector3 move;
+            if (!canSee || distance > data.ShootRange)
+            {
+                // Find a spot with a view: head toward the player until they're in sight and range.
+                move = Steer(player.transform.position, MoveSpeed, dt, 1f);
+            }
+            else if (distance < data.PreferredDistance - 2f)
+            {
+                // Too close: back away (along the mesh, so not into walls), still facing the player.
+                Vector3 away = distance > 0.01f ? -toPlayer / distance : -transform.forward;
+                move = Steer(transform.position + away * 4f, MoveSpeed * 0.85f, dt, 0.2f);
+            }
+            else
+            {
+                move = Strafe(toPlayer, distance, dt, 0.25f);
+            }
+            return move + SeparationPush(dt);
+        }
+
+        void CheckSight()
+        {
+            if (Time.time < nextSightCheck) return;
+            nextSightCheck = Time.time + SightInterval;
+            Vector3 eye = transform.position + Vector3.up * 0.6f;
+            Vector3 target = player.transform.position + Vector3.up * 0.3f;
+            canSee = !Physics.Linecast(eye, target, WorldMask(), QueryTriggerInteraction.Ignore);
+        }
+
+        static int worldMask = -1;
+        static int WorldMask()
+        {
+            if (worldMask != -1) return worldMask;
+            int mask = Physics.DefaultRaycastLayers & ~(CombatLayers.PlayerMask | CombatLayers.EnemyMask);
+            int billboards = LayerMask.NameToLayer(EnvironmentLayers.Billboards);
+            if (billboards >= 0) mask &= ~(1 << billboards);
+            return worldMask = mask;
+        }
+
+        void Loose()
+        {
+            if (player == null) return;
+            Vector3 from = transform.position + Vector3.up * 0.6f + transform.forward * 0.6f;
+            Vector3 target = player.transform.position + Vector3.up * 0.3f;
+            Arrow.Launch(combatant, from, Arrow.AimVelocity(from, target, data.ArrowSpeed), data.ArrowDamage, data.ArrowPoiseDamage);
+        }
+
         /// <summary>Waiting for a turn: keep HoldDistance from the player, circling slowly.</summary>
         Vector3 HoldRing(Vector3 toPlayer, float distance, float dt)
         {
@@ -284,6 +383,12 @@ namespace Beast.Gameplay
             if (distance > data.HoldDistance + 1.5f)
                 return Steer(player.transform.position, MoveSpeed, dt, data.HoldDistance);
 
+            return Strafe(toPlayer, distance, dt, 0.3f, data.HoldDistance);
+        }
+
+        /// <summary>Circling the player slowly, keeping 'ring' distance (if given), turning back at walls.</summary>
+        Vector3 Strafe(Vector3 toPlayer, float distance, float dt, float speedShare, float ring = -1f)
+        {
             if (Time.time >= nextStrafeSwitch)
             {
                 nextStrafeSwitch = Time.time + Random.Range(1.8f, 3.5f);
@@ -291,8 +396,8 @@ namespace Beast.Gameplay
             }
             Vector3 radial = distance > 0.01f ? -toPlayer / distance : -transform.forward; // away from the player
             Vector3 tangent = Vector3.Cross(Vector3.up, radial) * strafeSign;
-            float radialError = data.HoldDistance - distance; // positive = too close
-            Vector3 velocity = radial * Mathf.Clamp(radialError * 2f, -1f, 1f) * MoveSpeed * 0.6f + tangent * MoveSpeed * 0.3f;
+            float radialError = ring >= 0f ? ring - distance : 0f; // positive = too close
+            Vector3 velocity = radial * Mathf.Clamp(radialError * 2f, -1f, 1f) * MoveSpeed * 0.6f + tangent * MoveSpeed * speedShare;
 
             // Don't strafe into walls: if the way ahead is blocked, turn around.
             if (Physics.Raycast(transform.position, velocity.normalized, controller.radius + 0.4f, ~(CombatLayers.PlayerMask | CombatLayers.EnemyMask), QueryTriggerInteraction.Ignore))
@@ -384,6 +489,16 @@ namespace Beast.Gameplay
                 if (cornerCount > 0)
                 {
                     while (cornerIndex < cornerCount - 1 && Flat(corners[cornerIndex] - position).magnitude < 0.3f) cornerIndex++;
+                    // At the foot of a jump link that goes up: vault onto the top.
+                    if (cornerIndex > 0 && cornerIndex < cornerCount &&
+                        corners[cornerIndex].y - FeetY() > WorldNavigation.StepHeight &&
+                        Flat(corners[cornerIndex - 1] - position).magnitude < 0.6f &&
+                        Flat(corners[cornerIndex] - position).magnitude < WorldNavigation.MaxLinkReach)
+                    {
+                        StartVault(corners[cornerIndex]);
+                        cornerIndex++;
+                        return Vector3.zero;
+                    }
                     Vector3 end = corners[cornerCount - 1];
                     next = cornerIndex < cornerCount ? corners[cornerIndex] : end;
                     // Distance left along the path.
@@ -399,6 +514,42 @@ namespace Beast.Gameplay
             if (direction.sqrMagnitude < 0.0001f) return Vector3.zero;
             float step = Mathf.Min(speed * dt, remaining - stopDistance);
             return direction.normalized * step;
+        }
+
+        float FeetY() => transform.position.y + controller.center.y - controller.height * 0.5f;
+
+        /// <summary>Climbs onto a ledge (the top end of a jump link): up first, then over the edge.</summary>
+        void StartVault(Vector3 topOnMesh)
+        {
+            attacks.Cancel();
+            afterVault = state == State.Return ? State.Return : State.Chase;
+            state = State.Vault;
+            vaultFrom = transform.position;
+            vaultTo = topOnMesh + Vector3.up * (controller.height * 0.5f - controller.center.y + 0.05f);
+            vaultMid = new Vector3(vaultFrom.x, vaultTo.y + 0.1f, vaultFrom.z);
+            float length = (vaultMid - vaultFrom).magnitude + (vaultTo - vaultMid).magnitude;
+            vaultDuration = Mathf.Max(0.35f, length / 4f);
+            vaultTime = 0f;
+            verticalVelocity = 0f;
+            planarSpeed = 0f;
+            FaceDirection(Flat(vaultTo - vaultFrom), 1f);
+        }
+
+        void UpdateVault(float dt)
+        {
+            vaultTime += dt;
+            float t = Mathf.Clamp01(vaultTime / vaultDuration);
+            Vector3 position = t < 0.6f
+                ? Vector3.Lerp(vaultFrom, vaultMid, t / 0.6f)
+                : Vector3.Lerp(vaultMid, vaultTo, (t - 0.6f) / 0.4f);
+            controller.enabled = false;
+            transform.position = position;
+            controller.enabled = true;
+            if (t >= 1f)
+            {
+                state = afterVault;
+                nextRepath = 0f;
+            }
         }
 
         void FacePlayer(float dt, float speedMultiplier)
@@ -434,6 +585,7 @@ namespace Beast.Gameplay
 
             transform.SetPositionAndRotation(spawnPosition, spawnRotation);
             controller.enabled = true;
+            canSee = false;
             SetVisible(true);
             combatant.Revive();
             verticalVelocity = 0f;

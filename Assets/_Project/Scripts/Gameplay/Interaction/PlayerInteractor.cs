@@ -53,7 +53,7 @@ namespace Beast.Gameplay
             var bestPrompt = default(InteractionPrompt);
             foreach (var candidate in Interactable.Active)
             {
-                if (!candidate.TryGetPrompt(this, out var prompt)) continue;
+                if (candidate.Unavailable || !candidate.TryGetPrompt(this, out var prompt)) continue;
                 if (best != null && prompt.Distance >= bestPrompt.Distance) continue;
                 best = candidate;
                 bestPrompt = prompt;

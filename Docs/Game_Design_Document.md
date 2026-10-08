@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Version** | 1.16 |
-| **Last updated** | 2026-10-01 |
+| **Version** | 1.24 |
+| **Last updated** | 2026-10-08 |
 | **Author** | Joseph |
 | **Engine** | Unity 6 LTS (6000.0.34f1), URP |
 | **Unity project** | `Documents/Unity/Beast` |
@@ -154,12 +154,12 @@ Unlock homestead buildings → better crops & gear → push into more dangerous 
 | The wilds give the farm… | The farm gives combat… |
 |---|---|
 | Seeds (✅ bandit loot) & rare plant cuttings | Food that heals (✅ Turnip) |
-| Materials (✅ cloth, scrap; later wood, ore, hide) | Potions / oils from crops (Healroot → draughts, planned) |
+| Materials (✅ cloth, scrap; later wood, ore, hide) | Potions and meals from crops (✅ Healroot → draughts and tonics, turnip stew) |
 | Cleared land (kill nests → expand fields) | Money for gear & training (✅ selling crops) |
 | Livestock (tamed / rescued) | Supplies for long expeditions |
 
 ### Currently Playable Loop (greybox)
-Kill Bandits → loot seeds, cloth, scrap, gold → plant & water on the field → sleep → harvest Turnips / Healroot → sell to Oswin → buy more seeds & Healing Draughts → fight again.
+Kill Bandits → loot seeds, cloth, scrap, gold → plant & water on the field → sleep → harvest Turnips / Healroot → brew draughts and cook stew at the workbench, forge the scrap into better gear → sell the rest to Oswin → buy more seeds → fight again.
 
 ---
 
@@ -233,6 +233,7 @@ The protagonist's class is **the unit they served in** during the war.
 | Enemy | Faction | Status | Notes |
 |---|---|---|---|
 | **Bandit** | Human (deserters) | 🟡 Prototyped | 70 HP, 30 poise; Slash (0.45 s wind-up) & Overhead (0.75 s wind-up); chases within 12 m; drops cloth, scrap, seeds, bread, gold |
+| **Bandit Archer** | Human (deserters) | 🟡 Built (Milestone 25) | 45 HP, 20 poise; keeps ~9 m away (backs off if you close in), draws for 0.9 s (the red warning) then looses an arrow (14 damage, every ~2.6 s, up to 16 m). Needs a clear line of sight and moves to find one. Shoots you while you climb (a hit knocks you off). Arrows can be blocked from the front, parried and dodged. One at the bandit camp; same loot as a Bandit |
 | **Training Dummy** | — | 🟡 Prototyped | 200 HP, never attacks; for testing combos |
 | Blight-twisted beasts | Blight | ⬜ | Wilds; stronger at night |
 | The Ashen | Cult | ⬜ | Raids, dungeons |
@@ -244,12 +245,13 @@ The protagonist's class is **the unit they served in** during the war.
 | **Pathfinding** | A navigation mesh is built from the level's colliders when the scene loads (nothing baked, so level edits just work). Enemies walk around buildings, walls, trees and the climbing course |
 | **Taking turns** | At most **2** enemies close in and attack at once (attack "turns"). The others hold a ring ~3.5 m out, circling slowly, and step in when a turn frees up. A turn passes on after a swing, or after 5 s without one |
 | **Spacing** | Enemies keep ~1.4 m apart instead of stacking |
-| **Out of reach** | Climb onto something and enemies wait at the closest spot below; after **5 s** they give up and walk home. They can't hit you from more than 1.2 m below |
+| **Jump links (Milestone 25)** | Enemies **vault up** edges up to **2.4 m** (the same as you; not Not Climbable ones) and **jump down** drops up to **4.5 m** to reach you. Links are found automatically along the navigation mesh's edges when the scene loads |
+| **Out of reach** | Climb onto something taller than 2.4 m and melee enemies wait at the closest spot below; after **5 s** they give up and walk home. They can't hit you from more than 1.2 m below. Archers keep shooting as long as they can see you |
 | **Leash** | Never chase more than **22 m** from home or 18 m from you; walking home ignores you, and they **heal fully** on arrival (kiting a wounded enemy away doesn't pay) |
 | Tuning | Per enemy type on EnemyData: Hold Distance, Give Up After, Leash Range |
 
 ### Open
-- ✅ Pathfinding · ✅ Group tactics (turn-taking) · ⬜ More archetypes (archer, brute, beast) · ⬜ Ranged enemies that can hit climbers · ⬜ Enemies that climb or jump down
+- ✅ Pathfinding · ✅ Group tactics (turn-taking) · ✅ Archer (hits climbers) · ✅ Vaulting up and jumping down · ⬜ More archetypes (brute, beast) · ⬜ Enemies that climb walls · ⬜ Arrow hit/whoosh sounds and a proper arrow sprite
 
 ---
 
@@ -273,9 +275,12 @@ The protagonist's class is **the unit they served in** during the war.
 | Bread | Consumable | Heal 30 | 5 |
 | Healing Draught | Consumable | Heal 60 + 50 stamina | 25 |
 | Turnip | Crop (edible) | Heal 15 | 12 |
-| Healroot | Crop | Future draught ingredient | 20 |
-| Bandit Cloth | Material | Crafting / repairs (future) | 3 |
-| Iron Scrap | Material | Smithing (future) | 8 |
+| Healroot | Crop | Draught and tonic ingredient | 20 |
+| Bandit Cloth | Material | Smithing (caps, weapon grips) | 3 |
+| Iron Scrap | Material | Smithing | 8 |
+| Stamina Tonic | Consumable (crafted) | +100 stamina, then +30% stamina regen for 2 min | 30 |
+| Roast Turnips | Consumable (crafted) | Heal 35 | 12 |
+| Turnip Stew | Consumable (crafted) | Heal 55 + 30 stamina, then +15 Defense for 3 min | 30 |
 | Turnip Seeds | Seed | Plants Turnip | 2 |
 | Healroot Seeds | Seed | Plants Healroot | 6 |
 
@@ -302,7 +307,40 @@ The protagonist's class is **the unit they served in** during the war.
 | Soldier's Token | Accessory | +15 Stamina | 90 |
 
 ### Open
-- ⬜ Class restrictions on weapons · ⬜ Gear upgrading / tiers beyond Iron · ⬜ Crafting (cooking, alchemy, smithing) · ⬜ Storage chest at the homestead / storage limits · ⬜ Item icons · ⬜ Hotbar
+- ⬜ Class restrictions on weapons · ⬜ Tiers beyond Iron · ✅ Crafting, part one (below) · ✅ Storage chest (below) · ✅ Item icons (placeholder) · ⬜ Hotbar
+
+### Storage 🟡 *(Milestone 27)*
+| Decision | Choice |
+|---|---|
+| Where | A **storage chest** beside the homestead bed: walk up, **E** → the chest window (pauses the game) |
+| Size | **60 slots** (the bag has 30), same stacking rules |
+| Moving | Bag on the left (Store / All), chest on the right (Take / All). **Store crops, seeds & materials** moves all of those in one go; food, gear and quest items stay with you. No pickup notices when moving |
+| Crafting | The workbench uses ingredients from the bag first, then the chest (marked "(chest)" in the recipe list) |
+| Saving | Saved with the game under its own ID (`storage.homestead`) |
+| Later | ⬜ More chests (homestead upgrades) · ⬜ Sorting · ⬜ Drag and drop |
+
+### Crafting 🟡 *(Milestone 26)*
+| Decision | Choice |
+|---|---|
+| Where | The **workbench** beside your bed at the homestead: walk up, **E** → the Workbench window (pauses the game) |
+| Kinds | **Alchemy** (draughts and tonics) · **Cooking** (meals) · **Smithing** (gear) — cards on the left show how many you can make right now |
+| Ingredients | From the bag, then from gear you're wearing. Gear made from a piece you have equipped (same slot) **replaces it in place**, so an upgrade stays equipped |
+| Batches | Food and potions: Craft or ×5. Gear: one at a time |
+| Buffs | Some food gives a timed stat bonus (shown under the health bar with a countdown). Eating the same food again restarts it; different foods stack. Counts down only while playing; ends when you load a game |
+| Data | Recipes are assets (**Create → Beast → Crafting → Recipe**) listed in `Data/Crafting/RecipeBook`. Add one, then *Rebuild Game Database* |
+
+| Recipe | Kind | Needs | Makes |
+|---|---|---|---|
+| Healing Draught | Alchemy | 2 Healroot | Healing Draught |
+| Stamina Tonic | Alchemy | 1 Healroot + 1 Turnip | Stamina Tonic |
+| Roast Turnips | Cooking | 2 Turnip | Roast Turnips |
+| Turnip Stew | Cooking | 2 Turnip + 1 Bread | Turnip Stew |
+| Iron Sword & Shield | Smithing | Rusted Sword & Shield + 6 Iron Scrap + 2 Bandit Cloth | Iron Sword & Shield (upgrade) |
+| Iron Greatsword | Smithing | Rusted Greatsword + 8 Iron Scrap + 2 Bandit Cloth | Iron Greatsword (upgrade) |
+| Padded Cap | Smithing | 4 Bandit Cloth | Padded Cap |
+| Iron Helm | Smithing | Padded Cap + 5 Iron Scrap | Iron Helm (upgrade) |
+
+- ⬜ Crafting discipline (XP, recipes unlocked by level) · ⬜ Recipes found in the world · ⬜ Crafting animation · ⬜ More stations (forge, kitchen) as homestead upgrades
 
 ---
 
@@ -489,12 +527,14 @@ The loop this creates: night is when fights pay best, but they're riskier and ev
 | Let go | Shift (B / Circle) | — |
 | **Wall climb** | Walls marked **climbable** (ivy texture): Space at the wall, or run into it mid-air. W/S up and down, A/D sideways; reach the top to pull up, touch the floor to step off | 2 / s still · 9 / s moving |
 
-- **Out of stamina → you fall** ("Too tired to hold on"). **Taking a hit knocks you off.** No fall damage yet.
+- **Out of stamina → you fall** ("Too tired to hold on"). **Taking a hit knocks you off.**
+- **Climb down (Milestone 24):** stand still at a top edge, facing the drop → "[Space] Climb down" → Space lowers you into a hang (or onto the wall, if it's ivy). Edges too low to hang from (your feet would touch the ground) show no prompt: just walk off.
+- **Fall damage (Milestone 24):** drops up to **6 m** are harmless; above that you lose health in proportion, up to all of it at **18 m** (10 m ≈ a third). Measured from the top of the fall, so a jump's arc counts; grabbing a ledge or wall resets it. Blocking, dodging and Defense don't reduce it. A hard landing stuns you briefly (0.35–1 s), shakes the camera and thuds. Teleports, respawns and loading a save never count as falls.
 - While climbing you can't attack, block, dodge, use items or interact; lock-on is released.
 - **On-screen help:** the prompt spot shows the controls while hanging or climbing, and "[Space] Climb" when facing an ivy wall.
 - **Level-design rules:** any solid, flat-topped edge is grabbable — mark things that shouldn't be with the **Not Climbable** component (the greybox houses are, because their roofs have no collider). Climbable walls get a **Climbable Surface** component *and* must look different (ivy). Tops need ~0.7 m of standing room. Edges are found automatically (no hand-placed ledge markers).
 - **Animation:** two new clips, **Hang** (2 frames, sways) and **Climb** (4 frames, alternating reach; frozen while holding still). The placeholder generator draws them; real sheets need the same clips.
-- **Practice course** (west of the village): a 1.4 m and a 2.3 m block to vault, a 3.2 m × 9 m ledge wall to hang from and shimmy along, and a 6 m ivy cliff behind it.
+- **Practice course** (west of the village): a 1.4 m and a 2.3 m block to vault, a 3.2 m × 9 m ledge wall to hang from and shimmy along, a 6 m ivy cliff behind it, and (Milestone 24) a 10 m ivy tower south of the cliff for testing fall damage.
 | Fast travel · Mounts | ⬜ Open |
 
 ---
@@ -518,14 +558,17 @@ The loop this creates: night is when fights pay best, but they're riskier and ev
 | Interact (hold = repeat) | **F** | D-pad ↑ |
 | Quick-use food / potion | R | D-pad ↓ |
 | Cycle seeds | **V** | D-pad ← |
-| Inventory (pauses) | Tab / I | Select |
-| Character screen (pauses) | **C** | — (mouse UI for now) |
-| Journal (pauses) | **J** | — (mouse UI for now) |
+| Inventory (pauses) | Tab / I | Select (View) |
+| Character screen (pauses) | **C** | Select, then LB / RB |
+| Journal (pauses) | **J** | Select, then LB / RB |
 | Switch tracked quest | **T** | L3 |
-| Large map (toggle) | **M** | — |
+| Large map (toggle) | **M** | Select, then LB / RB |
 | Dialogue: continue / pick choice | Space / Enter / F / click · 1–9 · ↑↓ | A · D-pad |
 | Pause | Esc | Start |
-| Close menus | Tab / I / C / J / Esc | Select / Start |
+| Close menus | Tab / I / C / J / Esc | Select / Start / B |
+| **Menus (Milestone 35)** | Mouse · or arrow keys + Enter | D-pad / left stick to move the focus · A to press · left / right to change a slider or stepper · B to go back · LB / RB to switch tabs |
+
+**Controller navigation (Milestone 35):** every menu works with a pad (and the arrow keys): an ink-gold frame shows the focused control; the stick or D-pad moves it to the nearest control in that direction; A presses it; left / right change sliders and ‹ › steppers in place; lists scroll to keep the focus in view; B backs out (as Esc). In the bag, the focused slot shows its details and A uses or equips it. The first press only shows where the focus is; moving the mouse hides it. While a pad is in use, key hints and key caps show pad buttons (A, B, RB, RT, ↑ ↓ →, View, Start, LB / RB). The name field can't be typed on a pad: **Random** suggests a name. Dialogue already worked with a pad.
 
 Genshin-style layout (skills on E / Q, interact on F) adopted in Milestone 4d.
 
@@ -576,6 +619,22 @@ High fantasy — magic is common and flashy, but tied to the war and the Blight:
 | Rival | ⬜ | ⬜ |
 | Antagonist | The Ashen leader? | ⬜ |
 
+### Daily Routines 🟡 *(Milestone 31)*
+NPCs keep a day: they walk the village (along the navigation mesh, at a stroll) between places at set hours, face the way each place faces, stop walking while you stand next to them (so you can talk), and go home to sleep — hidden indoors, with no talking, trading or markers until morning. After sleeping, loading or skipping time they're simply where they should be. Not saved (it follows from the clock).
+
+| Time | Oswin | Brenna |
+|---|---|---|
+| 06:00 | At the stall | At the forge |
+| 12:00 | Lunch at the well | — |
+| 13:00 | At the stall | Reading the contract board |
+| 14:00 | — | At the forge |
+| 19:00 / 19:30 | Evening by the well | Evening by the well |
+| 21:30 / 22:30 | Asleep at home | Asleep at home |
+
+- Shops follow the people: you can trade with Oswin wherever he is while he's up; at night the shops are shut.
+- **Level design:** the places are empty objects under `[NPC Places]` (move them to change where people go); each NPC's **Npc Schedule** lists start hour, place, activity and whether it's indoors (the place is then the door).
+- ⬜ Shelter from rain · ⬜ "Closed" signs at night · ⬜ More townsfolk · ⬜ Schedules that change with quests and standing
+
 ---
 
 ## 16. Protagonist
@@ -584,7 +643,9 @@ High fantasy — magic is common and flashy, but tied to the war and the Blight:
 **Semi-fixed protagonist.**
 - **Fixed:** backstory — a soldier who fought in the final battle and **survived the blast when no one around them did**, marked by it somehow.
 - **Player chooses:** name, appearance, class.
-- 🟡 **Character creator (Milestone 19):** New Game → pick a slot → create your hero: **hair** (short, long, ponytail, bun, shaved), **hair colour** (8), **skin** tone (6) and **outfit** (5), with a live, turnable preview of the in-game sprite (also with the greatsword) and a Randomise button. The look is saved in the slot. ⬜ Name entry; ⬜ changing your look later (a mirror or barber).
+- 🟡 **Character creator (Milestone 19):** New Game → pick a slot → create your hero: **hair** (short, long, ponytail, bun, shaved), **hair colour** (8), **skin** tone (6) and **outfit** (5), with a live, turnable preview of the in-game sprite (also with the greatsword) and a Randomise button. The look is saved in the slot.
+- 🟡 **Name (Milestone 28):** a Name field at the top of the creator (letters, spaces, apostrophes and hyphens; up to 16). Left empty, you're "Wanderer". The name shows above the health bar, under your figure on the Character screen, first on the save slot card, and to Ink as `player_name()`.
+- 🟡 **The mirror (Milestone 28):** a standing mirror at the homestead: **E → Change your look** opens the same controls (name, hair, colours, outfit) on your current look, previewed with the weapon you hold. **Keep this look** applies it ("You are now …" when renamed); Cancel or Esc changes nothing. Free. ⬜ A barber in town (paid, more styles).
 - **Class = the unit they served in**, so cutscenes share one script with small class-specific lines.
 
 Open questions: see §25.
@@ -723,8 +784,18 @@ Generated by **Beast → Setup → Run Milestone 9 Setup (Environment Art)**. It
 ---
 
 ## 19. Audio
-**Status:** 🟡 placeholder sound (Milestone 20)
-- ⬜ Music direction (orchestral? folk? dark ambient?) — no music yet
+**Status:** 🟡 placeholder sound (Milestone 20) and music (Milestone 33)
+- ⬜ Music direction (orchestral? folk? dark ambient?). The placeholders lean **medieval folk**: modal tunes on lute, harp, bowed drone, flute and frame drum
+- 🟡 **Placeholder music** (Milestone 33), synthesised into `Audio/Placeholder/Music_*.wav` and listed in the SoundLibrary (swap in real tracks there):
+
+| Track | When | Feel |
+|---|---|---|
+| Title | Main menu | D Dorian, slow; drone, harp arpeggios, a flute line (60 s loop) |
+| Day | Playing, 06:00–20:00 | G major; lute bass and strums, flute and harp tunes (60 s loop) |
+| Night | Playing, 20:00–06:00 | A minor; a low pad and sparse harp (51 s loop) |
+| Combat | A (non-dummy) enemy chasing or attacking within 20 m; holds 5 s after | D minor, fast; frame drum, bowed ostinato, plucked stabs (29 s loop) |
+
+  - Tracks crossfade (combat faster); the music dips to 60% while a menu or the pause screen is open, and fades out while loading
 - ⬜ Voice: none / grunts / partial / full (grunts recommended for solo scope)
 - 🟡 **Placeholder sounds**, synthesised by the Milestone 20 setup into `Audio/Placeholder` (WAV) and listed in `Resources/SoundLibrary` — swap in real clips there, no code changes:
   - **Combat:** swing (heavier for the greatsword), hit, block clang, guard break, parry ring, death, dodge
@@ -733,7 +804,7 @@ Generated by **Beast → Setup → Run Milestone 9 Setup (Environment Art)**. It
   - **Interface:** button clicks; quest accepted / ready / complete, level up, sleep chimes
   - **Ambience:** day (wind + birds) and night (wind + crickets) loops crossfaded at dusk (19–21) and dawn (5–7); rain over them; a quiet wind on the title screen
 - Sounds play from events and sprite frames (`GameAudio`), so new characters and actions get sound for free
-- Volumes (Settings → Audio): **Master** (listener), **Music** (for later), **Sound effects**, **Ambience**, **Interface sounds**
+- Volumes (Settings → Audio): **Master** (listener), **Music**, **Sound effects**, **Ambience**, **Interface sounds**
 
 ---
 
@@ -794,7 +865,7 @@ Generated by **Beast → Setup → Run Milestone 9 Setup (Environment Art)**. It
 | Dev line (state, time, debug keys) | 🟡 Dev builds only |
 
 ### To Design
-- ⬜ Final UI tech (UI Toolkit) & art · ⬜ Controller-first navigation · ⬜ Item icons · ⬜ Main menu art · ⬜ Key rebinding
+- ⬜ Final UI tech (UI Toolkit) & art · ✅ Controller navigation (Milestone 35, in the IMGUI screens) · ✅ Item icons (placeholder) · ⬜ Main menu art · ⬜ Key rebinding · ⬜ Pad button glyphs (icons instead of letters)
 - ⬜ Accessibility: rebinding, subtitles, colour-blind options (interface size ✅ in Settings)
 
 ### Settings (Milestone 17)
@@ -843,7 +914,7 @@ Opened from the main menu and the pause menu. Every change applies at once and i
 | Event | Raised by | Used by (now / planned) |
 |---|---|---|
 | GameStateChanged | Game state | Input, HitStop, menus |
-| HourChanged / **DayPassed** | World clock | Farming, shops (✅) · NPC schedules, raids (planned) |
+| HourChanged / **DayPassed** | World clock | Farming, shops (✅) · raids (planned). NPC schedules read the clock directly |
 | DamageDealt | Combatants | Damage numbers, quest kills, Combat XP, standing from kills (✅) · stats (planned) |
 | **CombatantDied** | Combatants | Debug probe (✅) |
 | ItemsAdded / GoldChanged / ItemUsed | Inventory | Notifications (✅) · quests (planned) |
@@ -917,6 +988,13 @@ Each step builds its milestone's assets and scene objects. All steps are safe to
 | Run Milestone 7 Setup (Progression) | Progression config, Knight & Farming skill trees, skill attacks, weapons & armor, Brenna's Forge + blacksmith NPC, XP rewards, player stats/progression/equipment/skills, character screen |
 | Run Milestone 8 Setup (Dialogue & Quests) | Compiles Ink, speakers, 2 story + 2 side quests + 3 contracts, dialogue runner & box, quest UI, NPC conversations, contracts board, quest log on the player |
 | Run Milestone 9 Setup (Environment Art) | EnvBillboard / MinimapOnly layers, generated environment textures, materials and meshes, dressed buildings, `Environment_Dressing` (square, roads, fence, props, trees, rocks, ground cover), lighting & fog. HUD, pause menu, quest tracker and minimap need no setup: they're added automatically to any scene with a Player |
+| Run Milestone 33 Setup (Music) | Synthesises the four placeholder music loops into `Audio/Placeholder` and adds them to the SoundLibrary (run Milestone 20 first). Keeps tracks you've swapped in |
+| Run Milestone 31 Setup (NPC Schedules) | Daily routines for Oswin and Brenna (Npc Schedule components) and their places under `[NPC Places]` (stall, forge, the well, the contract board, each one's house door). Kept on re-run |
+| Run Milestone 28 Setup (Names & Mirror) | The standing `Mirror` near the bed (kept on re-run) with a `Mirror_Glass` material, and a recompile of the Ink story (adds `player_name()`). Name entry needs no setup |
+| Run Milestone 27 Setup (Storage Chest) | The 60-slot `Storage_Chest` beside the bed (kept on re-run), linked to the workbench so crafting can use its contents |
+| Run Milestone 26 Setup (Crafting) | Three new foods (Stamina Tonic, Roast Turnips, Turnip Stew) with icons, eight recipes in `Data/Crafting/Recipes`, the `RecipeBook`, the `Workbench` beside the bed, and Player Buffs on the player. Re-running keeps your edits and adds missing recipes to the book |
+| Run Milestone 25 Setup (Archers & Jump Links) | Bandit Archer data (`Enemy_BanditArcher`, kept if it exists), placeholder sprites with a bow (`Sheet_BanditArcher`), and `Bandit_Archer` at the bandit camp. Jump links need no setup |
+| Run Milestone 24 Setup (Fall Damage & Climbing Down) | Adds Player Fall Damage to the player and the 10 m `Ivy_Tower` to the climbing course (rebuilt on re-run; re-running Milestone 11 removes it, so run 24 again after it). Climbing down needs no setup |
 | Run Milestone 20 Setup (Sound) | Synthesises the placeholder sounds into `Audio/Placeholder` and fills `Resources/SoundLibrary` (keeps clips you've swapped in). The sound player needs no scene changes |
 | Run Milestone 19 Setup (Character Look) | Adds Player Appearance to the player and marks each combat style with the weapon it shows (greatsword / sword &amp; shield). The creator itself needs no setup |
 | Run Milestone 18 Setup (Item Icons) | Draws a placeholder icon for every item without one (`Art/UI/Icons`), the gold icon and the dropped-item card material (`Resources`) |
@@ -996,7 +1074,7 @@ Damage values are before the attacker's Attack stat and the target's Defense.
 | 1 | **Backbone** | ✅ Verified | Bootstrapper, services, events, save/load, input, game states, world clock, data layer |
 | 2 | **Combat prototype** | ✅ Verified — *fun* | Knight (2 styles), Bandit, Dummy; dodge/block/parry, lock-on, hit-stop |
 | 3 | **Sprite tech** | ✅ Verified | 8-dir billboards, shadow quads, attack-synced animation, placeholder sheets |
-| 4 | **Systems** | 🟡 In progress | 4a Items/inventory/loot ✅ · 4b Farming ✅ · 4c Economy & shops ✅ · 4d Stats & progression ✅ · 4e Dialogue & quests 🟡 (Ink, quests, contracts — awaiting test) · Light reputation 🟡 (awaiting test) · Climbing & ledges 🟡 (awaiting test) · Sprite shadows 🟡 (awaiting test) · Smarter enemies 🟡 (awaiting test) · Day/night & weather 🟡 (awaiting test) · Night danger & fatigue 🟡 (awaiting test) · Main menu & save slots 🟡 (awaiting test) · Settings 🟡 (awaiting test) · Item icons 🟡 · Character creator & weapon looks 🟡 · Placeholder sound 🟡 (awaiting test) |
+| 4 | **Systems** | 🟡 In progress | 4a Items/inventory/loot ✅ · 4b Farming ✅ · 4c Economy & shops ✅ · 4d Stats & progression ✅ · 4e Dialogue & quests 🟡 (Ink, quests, contracts — awaiting test) · Light reputation 🟡 (awaiting test) · Climbing & ledges 🟡 (awaiting test) · Sprite shadows 🟡 (awaiting test) · Smarter enemies 🟡 (awaiting test) · Day/night & weather 🟡 (awaiting test) · Night danger & fatigue 🟡 (awaiting test) · Main menu & save slots 🟡 (awaiting test) · Settings 🟡 (awaiting test) · Item icons 🟡 · Character creator & weapon looks 🟡 · Placeholder sound 🟡 (awaiting test) · Fall damage & climbing down 🟡 · Archers & jump links 🟡 · Crafting 🟡 · Storage chest 🟡 · Names & mirror 🟡 · NPC schedules 🟡 · Music 🟡 · Controller navigation 🟡 |
 | 5 | Vertical slice | ⬜ | Prologue + homestead + 1 wild zone, polished; playtest with strangers |
 | 6 | Steam page + demo | ⬜ | Wishlists, devlogs |
 | 7 | Content & polish | ⬜ | Full v1 region |
@@ -1005,7 +1083,7 @@ Damage values are before the attacker's Attack stat and the target's Defense.
 ### Candidate Next Steps
 | Option | Why |
 |---|---|
-| Real UI | Theme and layout are proven in the prototype; port to UI Toolkit with controller support |
+| Real UI | Theme, layout and pad navigation are proven in the prototype; port to UI Toolkit with the real art |
 | Real-art style test | Sets the art budget |
 
 ---
@@ -1041,7 +1119,7 @@ All unresolved design questions in one place.
 
 ### Farming & Economy
 - [ ] Seasons? Tools and water capacity? Rain? Soil blight? Livestock? Crop raids?
-- [ ] Crafting scope (cooking, alchemy, smithing)?
+- [x] Crafting scope: alchemy, cooking and smithing at one homestead workbench (Milestone 26). Open: a Crafting discipline?
 - [ ] Storage limits / homestead chest?
 - [ ] Merchant gold limits, buyback, haggling, regional prices, scarcity events?
 
@@ -1058,14 +1136,12 @@ Requested features and accepted compromises, to revisit before the vertical slic
 
 | Item | Type | Current behaviour | Planned |
 |---|---|---|---|
-| Fall damage | Feature | Drops from any height are harmless (climbing makes big drops common) | Damage above ~6 m, scaled by height |
-| Climb down from a top edge | Feature | You can only drop off a ledge, not lower yourself into a hang | Walk to an edge + hold back to grab it from above |
 | Sprite shadow offset | Limitation | A sprite ignores shadows from anything within its Self-Shadow Offset toward the sun (e.g. a character pressed right against another one) | Fine for now; a per-character shadow ID in the shadow map would remove it |
-| Prototype UI (IMGUI) | Tech debt | Every screen shares one theme and scales with resolution, but menus are mouse-driven | Real UI (UI Toolkit) with controller navigation (§20) |
-| Enemy pathfinding | Tech debt | Enemies move straight at the player | NavMesh before real levels |
+| Prototype UI (IMGUI) | Tech debt | Every screen shares one theme, scales with resolution and works with mouse, pad and arrow keys (Milestone 35) | Port to UI Toolkit when real art arrives (§20) |
 | **Full regression test pass** | QA | Not yet run. `Test_Checklist.md` (MegaGame101 folder) covers Milestones 1 → 4d, ~150 checks | Run the whole checklist with fresh saves and Error Pause on; fix anything found. Do this before the vertical slice (or sooner if bugs appear). Extend the checklist with each new milestone |
 | Sprites invisible in Scene view | Tooling | Characters show as cyan boxes outside Play Mode (environment billboards do show) | Edit-mode sprite preview |
 | Generated environment layout | Tooling | The Milestone 9 setup rebuilds `Environment_Dressing` from scratch on every run | Hand-built levels replace it at the vertical slice |
+| Enemy name plates through walls | UI | An enemy's name and health bar show even when a house is between you and it (seen at night in town) | Hide plates without a line of sight |
 | Build Settings | Cleanup | `Assets/Scenes/SampleScene` (Unity's template scene) is still in the build list | Remove it before the first build |
 
 ---
@@ -1095,6 +1171,14 @@ Requested features and accepted compromises, to revisit before the vertical slic
 | 2026-09-29 | 0.5 | Milestone 3 verified; sprite shadow shader deferred. Milestone 4a: items, inventory, loot, consumables, gold, inventory screen. |
 | 2026-09-29 | 0.6 | 4a verified. Climbing & ledge grab added to backlog. Milestone 4b farming: interaction system, field, Turnip & Healroot, watering/wilt/death, regrowth, bed. |
 | 2026-09-30 | 0.7 | 4b verified. Milestone 4c economy: shop pricing, supply & demand, restock, merchant Oswin, trade screen, trade events, reputation price hook. |
+| 2026-10-08 | 1.24 | **Milestone 35 — controller support.** Kept the IMGUI screens (the UI Toolkit port waits for real art) and added navigation to every themed control: focus frame, D-pad / stick / arrow keys to move, A / Enter to press, left / right on sliders and steppers, scroll-to-focus, B to back out (now also bound to Resume), pad labels in key hints and key caps, a Random name button for pad players. Bag slots are navigable and show details on focus. |
+| 2026-10-08 | 1.23 | **Milestone 33 — placeholder music.** Four synthesised folk-style loops (title, day, night, combat) that crossfade by game state, clock and danger: combat music while enemies chase you nearby, holding a few seconds after. Quieter under menus. Settings → Audio → Music now does something. |
+| 2026-10-08 | 1.22 | **Milestone 31 — NPC schedules.** Oswin and Brenna keep daily routines: work from 06:00, lunch and evenings at the well, Brenna checking the contract board, and sleeping at home at night (hidden; no trading or markers). They walk the navigation mesh, stop for you, and snap into place after time skips. NPCs no longer cut holes in the navigation mesh. |
+| 2026-10-08 | 1.21 | **Milestone 28 — names & the mirror.** The creator gains a Name field (default "Wanderer"), shown on the HUD, the Character screen and the save slot, and available to Ink as `player_name()`. A mirror at the homestead reopens the creator's controls to change your name, hair, colours and outfit mid-game. The creator and the mirror share one look editor. |
+| 2026-10-08 | 1.20 | **Milestone 27 — storage chest.** A 60-slot chest beside the homestead bed with a parchment Bag / Chest window (Store, Take, All, and "Store crops, seeds & materials"). The workbench now uses ingredients from the chest too. Saved with the game. |
+| 2026-10-08 | 1.19 | **Milestone 26 — crafting, part one.** A workbench beside the homestead bed opens a parchment Workbench window with Alchemy, Cooking and Smithing recipes (eight to start): Healing Draught and a new Stamina Tonic from Healroot; Roast Turnips and Turnip Stew; Iron weapons and the Iron Helm forged from their lesser versions plus scrap and cloth (upgrading gear you're wearing in place), and a Padded Cap from cloth. Food can now give timed buffs, shown under the health bar. Crafting sounds. |
+| 2026-10-08 | 1.18 | **Milestone 25 — archers & jump links.** (Pathfinding itself already existed from Milestone 13; the stale backlog row is gone.) Enemies vault up edges up to 2.4 m and jump down drops up to 4.5 m along automatic jump links, so low blocks are no longer safe. New **Bandit Archer**: keeps its distance, draws (telegraphed) and looses arcing arrows whenever it can see you, including while you climb; walks round to get a view; arrows can be blocked, parried and dodged. Placeholder sprites gained a bow. One archer at the bandit camp. |
+| 2026-10-08 | 1.17 | **Milestone 24 — fall damage & climbing down.** Drops over 6 m hurt in proportion to height (all your health at 18 m), measured from the top of the fall; a hard landing stuns briefly, shakes the camera and thuds. Stand still at a top edge facing the drop and press Space to lower yourself into a hang, or onto an ivy wall. New 10 m ivy tower on the climbing course. Removed both from the backlog. |
 | 2026-10-08 | 1.16 | **UI restyle, step 4: pop-ups and HUD.**<br>• Shop and contract board are parchment windows: paper rows and cards, brush buttons, and the tracked contract framed in vermilion.<br>• Dialogue is an ink band across the bottom: the portrait on a paper mat, the speaker's name in spaced vermilion capitals, choices as paper rows (selected one red) with key caps.<br>• HUD: see-through ink panels and key caps; a thin vermilion health bar with thin stamina and poise bars and the numbers above them; Tired / Exhausted in spaced capitals; gold coin and sun in ink gold; quest banners on an ink band with the title in spaced capitals; a thin ink frame on the minimap. "Defeated" and the sleep fade use spaced capitals.<br>• This completes the restyle (Milestone 21). |
 | 2026-10-07 | 1.15 | **UI restyle, step 3: tab contents.** Bag: category cards (All, Food, Materials, Seeds & crops, Gear), paper slots with a vermilion frame on the selected one, an ink details panel with Use / Equip. Character: Combat / Farming / Gear cards. Each Discipline's skills form a tree of diamond nodes, one row per tier: gold rim when learned, ink when learnable, grey when locked, linked to prerequisites. Gear shows the character's own sprite among the six equipment slots; the ink panel has the selected slot, spare gear that fits it, and all stats. Journal: filter cards plus a town-standing card, the quest list (gold diamond = tracked), and an ink details panel with Track / Abandon (Esc cancels the abandon question). |
 | 2026-10-07 | 1.14 | **UI restyle, step 2: the game menu.** Map, Journal, Bag, Character and Options are now tabs of one parchment screen with an ink top bar (Q / E switch; M / J / Tab / I / C jump to a tab or close it; Esc opens Options, which is the pause). The large map is now the Map tab (time frozen) instead of an overlay while playing. Options: four tiles that show their settings inline, and Resume / Save / Load last save / Quit to title / Quit to desktop as brush buttons. Settings restyled on parchment (paper sliders, toggles, option cards) on the title screen and in Options. |

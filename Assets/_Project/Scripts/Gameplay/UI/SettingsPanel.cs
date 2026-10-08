@@ -73,9 +73,10 @@ namespace Beast.Gameplay
                 IsOpen = false;
                 return;
             }
-            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape)
+            bool escape = Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape;
+            if (escape || UITheme.ConsumeNavBack())
             {
-                Event.current.Use();
+                if (escape) Event.current.Use();
                 Close();
                 return;
             }
@@ -185,7 +186,7 @@ namespace Beast.Gameplay
             o.effectsVolume = SliderRow(area, ref y, "Sound effects", o.effectsVolume, 0f, 1f, 0.05f, $"{o.effectsVolume * 100f:0}%");
             o.ambienceVolume = SliderRow(area, ref y, "Ambience", o.ambienceVolume, 0f, 1f, 0.05f, $"{o.ambienceVolume * 100f:0}%");
             o.interfaceVolume = SliderRow(area, ref y, "Interface sounds", o.interfaceVolume, 0f, 1f, 0.05f, $"{o.interfaceVolume * 100f:0}%");
-            Note(area, ref y, "All sounds are placeholders for now, and there's no music yet.");
+            Note(area, ref y, "All sounds and music are placeholders for now.");
         }
 
         void DrawInterface(Rect area, ref float y, GameSettings o)

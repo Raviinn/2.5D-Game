@@ -234,6 +234,8 @@ public sealed class ClimbHarness : MonoBehaviour
         Check(hanging && climber.Mode == ClimbMode.None && player.transform.position.y < 1.3f && !combat.IsTraversing,
             $"loading mid-hang returns to the saved spot (y {player.transform.position.y:0.00})");
 
+        yield return ClimbDownAndFallTests(combat, stamina);
+
         // ---- I: pause menu lists climbing ----
         state.SetState(GameState.Paused); // the game menu opens on Options
         yield return null;
@@ -248,6 +250,104 @@ public sealed class ClimbHarness : MonoBehaviour
     }
 
     static int PlaceholderColumns() => 27;
+
+    // ---------- Climbing down & fall damage (Milestone 24) ----------
+
+    IEnumerator ClimbDownAndFallTests(PlayerCombat combat, Stamina stamina)
+    {
+        var fall = player.GetComponent<PlayerFallDamage>();
+        var body = player.GetComponent<Combatant>();
+        Check(fall != null, "player has PlayerFallDamage");
+        Check(GameObject.Find("Ivy_Tower") != null, "ivy tower exists");
+        if (fall == null) yield break;
+        var landings = new List<PlayerLandedEvent>();
+        void OnLanded(PlayerLandedEvent e) => landings.Add(e);
+        EventBus<PlayerLandedEvent>.Subscribe(OnLanded);
+
+        // ---- J1: climb down from the 3.2 m wall's top into a hang (east face at x = O.x + 2) ----
+        stamina.Refill();
+        Keys();
+        PlaceAt(new Vector3(O.x + 1.4f, 3.2f + 1.1f, O.z + 1f), 90f);
+        yield return Wait(0.6f);
+        Check(Contains(climber.Hints, "Climb down"), "'[Space] Climb down' hint shows at the wall's edge");
+        yield return Shot("c7_climb_down_hint");
+        seen.Clear();
+        yield return Press(Key.Space);
+        yield return Until(() => climber.Mode == ClimbMode.Hanging, 2f);
+        yield return Wait(0.2f);
+        Vector3 p = player.transform.position;
+        Check(seen.Contains(ClimbMode.Lowering) && climber.Mode == ClimbMode.Hanging && Mathf.Abs(p.y - 2f) < 0.15f && p.x > O.x + 2f,
+            $"Space at the edge lowers you into a hang (modes {string.Join(",", seen)}, pos {p})");
+        yield return Shot("c8_lowered_hang");
+        yield return Press(Key.Space);
+        yield return Wait(1f);
+        Check(climber.Mode == ClimbMode.None && player.transform.position.y > 4f, $"and you can pull back up (y {player.transform.position.y:0.00})");
+
+        // ---- J2: a shallow edge has no hint ----
+        PlaceAt(new Vector3(O.x + 5.5f, 1.4f + 1.1f, O.z + 3.5f), 90f);
+        yield return Wait(0.6f);
+        Check(!Contains(climber.Hints, "Climb down"), "no 'Climb down' hint on the 1.4 m block (too low to hang from)");
+
+        // ---- J3: climb down onto the ivy cliff's east face, then down to the wall top ----
+        stamina.Refill();
+        body.Heal(body.MaxHealth);
+        PlaceAt(new Vector3(O.x - 0.7f, 6f + 1.1f, O.z + 1f), 90f);
+        yield return Wait(0.6f);
+        seen.Clear();
+        Check(Contains(climber.Hints, "Climb down"), "'Climb down' hint at the ivy cliff's edge");
+        yield return Press(Key.Space);
+        yield return Until(() => climber.Mode == ClimbMode.Climbing, 2f);
+        Check(climber.Mode == ClimbMode.Climbing, $"climbing down an ivy edge puts you on the wall (mode {climber.Mode})");
+        Keys(Key.S);
+        yield return Until(() => climber.Mode == ClimbMode.None, 5f);
+        Keys();
+        yield return Wait(0.5f);
+        float y = player.transform.position.y;
+        Check(climber.Mode == ClimbMode.None && y > 3.9f && y < 4.7f, $"climbed down the ivy onto the wall top (y {y:0.00})");
+        Check(Mathf.Approximately(body.Health, body.MaxHealth), $"climbing down costs no health ({body.Health:0}/{body.MaxHealth:0})");
+
+        // ---- J4: walking off the 10 m tower hurts and stuns ----
+        stamina.Refill();
+        body.Heal(body.MaxHealth);
+        PlaceAt(new Vector3(O.x - 2.5f, 10f + 1.1f, O.z - 8f), 90f);
+        yield return Wait(0.6f);
+        landings.Clear();
+        float before = body.Health;
+        bool stunned = false;
+        Keys(Key.W);
+        yield return Until(() => landings.Count > 0, 5f);
+        Keys();
+        for (float t = 0f; t < 0.5f; t += Time.unscaledDeltaTime) { stunned |= combat.StateName == "Staggered"; yield return null; }
+        float expected = fall.DamageFor(10f);
+        float lost = before - body.Health;
+        var landed = landings.Count > 0 ? landings[^1] : default;
+        Check(landings.Count > 0 && landed.Drop > 9.3f && landed.Drop < 11f, $"landing from the tower reports a ~10 m drop ({landed.Drop:0.00} m)");
+        Check(lost > expected * 0.8f && lost < expected * 1.3f, $"a 10 m drop costs about a third of your health (lost {lost:0}, expected ~{expected:0} of {body.MaxHealth:0})");
+        Check(stunned, "a hard landing stuns you briefly");
+        yield return Shot("c9_hard_landing");
+
+        // ---- J5: the 3.2 m drop is harmless ----
+        body.Heal(body.MaxHealth);
+        landings.Clear();
+        PlaceAt(new Vector3(O.x + 1.4f, 3.2f + 1.1f, O.z + 1f), 90f);
+        yield return Wait(0.4f);
+        Keys(Key.W);
+        yield return Until(() => landings.Count > 0, 3f);
+        Keys();
+        yield return Wait(0.3f);
+        Check(landings.Count > 0 && landings[^1].Damage == 0f && Mathf.Approximately(body.Health, body.MaxHealth),
+            $"walking off the 3.2 m wall doesn't hurt (drop {(landings.Count > 0 ? landings[^1].Drop : 0f):0.00} m)");
+
+        // ---- J6: a very long fall kills; respawning isn't a fall ----
+        PlaceAt(new Vector3(O.x + 12f, 26f, O.z + 8f), 0f);
+        yield return Until(() => combat.IsDead, 5f);
+        Check(combat.IsDead, $"a 25 m fall is lethal (health {body.Health:0})");
+        yield return Until(() => !combat.IsDead, 6f);
+        yield return Wait(1f);
+        Check(!combat.IsDead && Mathf.Approximately(body.Health, body.MaxHealth), $"respawn isn't counted as a fall (health {body.Health:0}/{body.MaxHealth:0})");
+
+        EventBus<PlayerLandedEvent>.Unsubscribe(OnLanded);
+    }
 
     // ---------- Sprite shadows (Milestone 12) ----------
 

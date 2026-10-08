@@ -8,9 +8,9 @@ namespace Beast.Gameplay
     /// Draws the player's sprite sheet from their chosen look (character creator) and the weapon they're using:
     /// sword and shield, or a two-handed greatsword. The sheet is redrawn whenever either changes.
     /// Only takes over while the Visual still uses a placeholder-sized sheet: real art (any other size) is left alone.
-    /// Saved with the game.
+    /// Also holds the hero's name (shown on the HUD, the character screen and the save slot). Saved with the game.
     /// </summary>
-    public sealed class PlayerAppearance : MonoBehaviour, ISaveable
+    public sealed class PlayerAppearance : MonoBehaviour, ISaveable, ISaveSummarySource
     {
         /// <summary>The look picked in the character creator, waiting for the new game's player to spawn.</summary>
         public static CharacterAppearance Pending;
@@ -25,6 +25,8 @@ namespace Beast.Gameplay
 
         public string SaveId => saveId;
         public CharacterAppearance Appearance => appearance.Clone();
+        /// <summary>The hero's name ("Wanderer" when none was given).</summary>
+        public string PlayerName => appearance.DisplayName;
         /// <summary>The weapon look currently shown.</summary>
         public WeaponLook ShownLook { get; private set; }
         public Texture2D CurrentSheet => sheets.TryGetValue(ShownLook, out var sheet) ? sheet : null;
@@ -40,6 +42,7 @@ namespace Beast.Gameplay
             {
                 appearance = Pending.Clone();
                 appearance.Clamp();
+                appearance.name = CharacterAppearance.CleanName(appearance.name);
                 Pending = null;
             }
 
@@ -71,9 +74,16 @@ namespace Beast.Gameplay
 
         public void SetAppearance(CharacterAppearance next)
         {
-            if (next == null || next.SameAs(appearance)) return;
+            if (next == null) return;
+            string name = CharacterAppearance.CleanName(next.name);
+            if (next.SameAs(appearance))
+            {
+                appearance.name = name; // a new name only: no need to redraw
+                return;
+            }
             appearance = next.Clone();
             appearance.Clamp();
+            appearance.name = name;
             ClearSheets();
             Show(CurrentLook(), force: true);
         }
@@ -102,6 +112,9 @@ namespace Beast.Gameplay
         }
 
         public string CaptureState() => JsonUtility.ToJson(appearance);
+
+        /// <summary>The save slot's first detail line is the hero's name.</summary>
+        public void Describe(SaveSummary summary) => summary.details.Insert(0, PlayerName);
 
         public void RestoreState(string json)
         {

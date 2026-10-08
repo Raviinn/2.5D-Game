@@ -59,12 +59,12 @@ namespace Beast.Gameplay
             int count = contracts?.Length ?? 0;
             var view = new Rect(area.x, area.y, area.width, area.height - 52f);
             var content = new Rect(0f, 0f, view.width - 18f, Mathf.Max(1, count) * (RowHeight + 10f));
-            scroll = GUI.BeginScrollView(view, scroll, content);
+            scroll = UITheme.BeginScroll(view, scroll, content);
             if (count == 0)
                 GUI.Label(new Rect(4f, 4f, content.width - 8f, 40f), "No work posted today.", UITheme.PaperMuted);
             for (int i = 0; i < count; i++)
                 if (contracts[i] != null) DrawContract(new Rect(0f, i * (RowHeight + 10f), content.width, RowHeight), contracts[i]);
-            GUI.EndScrollView();
+            UITheme.EndScroll(ref scroll, view);
 
             GUI.Label(new Rect(area.x, area.yMax - 34f, area.width - 220f, 30f), "Accepted contracts appear in your journal and the tracker.", UITheme.PaperMuted);
             UITheme.KeyHints(area.xMax, area.yMax - 36f, false, ("Esc", "Leave"));

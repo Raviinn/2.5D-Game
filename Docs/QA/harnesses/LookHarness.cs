@@ -87,15 +87,19 @@ public sealed class LookHarness : MonoBehaviour
         look.hairColor = 5;  // blonde
         look.skinTone = 4;   // brown
         look.outfit = 2;     // wine coat
+        look.name = "Edda";
+        Check(CharacterAppearance.CleanName("  Bran   the  Bold!!42 ") == "Bran the Bold", $"names keep letters and single spaces ({CharacterAppearance.CleanName("  Bran   the  Bold!!42 ")})");
+        Check(CharacterAppearance.CleanName("Aaaaaaaaaaaaaaaaaaaaaaa").Length == CharacterAppearance.MaxNameLength, "names are cut to 16 letters");
+        Check(new CharacterAppearance().DisplayName == "Wanderer", "no name → Wanderer");
         yield return Wait(0.6f);
         yield return Shot("02_creator_long_blonde");
-        Check(Field(menu, "previewSheet") is Texture2D, "the creator draws a live preview");
-        SetField(menu, "previewDirection", 2);
-        SetField(menu, "previewWeapon", WeaponLook.Greatsword);
+        Check(menu.Creator.PreviewSheet != null, "the creator draws a live preview");
+        menu.Creator.Direction = 2;
+        menu.Creator.PreviewWeapon = WeaponLook.Greatsword;
         yield return Wait(0.5f);
         yield return Shot("03_creator_side_greatsword");
-        SetField(menu, "previewDirection", 0);
-        SetField(menu, "previewWeapon", WeaponLook.SwordAndShield);
+        menu.Creator.Direction = 0;
+        menu.Creator.PreviewWeapon = WeaponLook.SwordAndShield;
 
         // The builder really draws the choices.
         var a = CharacterSpriteBuilder.Draw(look.ToPalette(WeaponLook.SwordAndShield));
@@ -174,6 +178,44 @@ public sealed class LookHarness : MonoBehaviour
         player = GameObject.FindWithTag("Player");
         appearance = player.GetComponent<PlayerAppearance>();
         Check(appearance.Appearance.SameAs(chosen), "loading the save brings the creator's look back");
+        Check(appearance.PlayerName == "Edda", $"the name from the creator is kept ({appearance.PlayerName})");
+        var slotInfo = save.ReadSlot(0);
+        Check(slotInfo.Summary != null && slotInfo.Summary.details.Count > 0 && slotInfo.Summary.details[0] == "Edda",
+            $"the save slot shows the hero's name ({(slotInfo.Summary != null ? string.Join(" · ", slotInfo.Summary.details) : "no summary")})");
+
+        // ================= The mirror (Milestone 28) =================
+        var mirror = FindFirstObjectByType<Mirror>();
+        var mirrorScreen = FindFirstObjectByType<MirrorScreen>();
+        var gameState = Services.Get<GameStateService>();
+        Check(mirror != null && mirrorScreen != null, "there's a mirror at the homestead");
+        if (mirror != null && mirrorScreen != null)
+        {
+            mirror.Open();
+            yield return Wait(0.4f);
+            Check(gameState.Current == GameState.InGameMenu && mirrorScreen.Mirror == mirror, "the mirror window opens (game paused)");
+            Check(gameState.BlockHotkeyClose, "menu hotkeys don't close the mirror (so names can be typed)");
+            Check(mirrorScreen.Editing.SameAs(chosen) && mirrorScreen.Editing.name == "Edda", "the mirror starts from your current look");
+            mirrorScreen.Editing.hairStyle = (int)HairStyle.Ponytail;
+            mirrorScreen.Editing.hairColor = 7;
+            mirrorScreen.Editing.name = "Maren";
+            yield return Wait(0.5f);
+            yield return Shot("07_mirror");
+            mirrorScreen.Keep();
+            yield return Wait(0.4f);
+            var now = appearance.Appearance;
+            Check(gameState.Current == GameState.Playing && now.hairStyle == (int)HairStyle.Ponytail && now.hairColor == 7 && appearance.PlayerName == "Maren",
+                $"Keep this look applies it ({appearance.PlayerName}, hair {now.hairStyle})");
+            Check(Has(appearance.CurrentSheet.GetPixels32(), CharacterAppearance.HairColors[7]), "the sprite is redrawn with the new hair colour");
+            yield return Shot("08_after_mirror");
+
+            mirror.Open();
+            yield return Wait(0.3f);
+            mirrorScreen.Editing.outfit = 4;
+            mirrorScreen.Editing.name = "Nobody";
+            gameState.SetState(GameState.Playing); // Esc / Cancel
+            yield return Wait(0.3f);
+            Check(appearance.Appearance.outfit == now.outfit && appearance.PlayerName == "Maren", "leaving without keeping changes nothing");
+        }
 
         // ================= Item icons and dropped items =================
         var items = Resources.FindObjectsOfTypeAll<ItemData>();

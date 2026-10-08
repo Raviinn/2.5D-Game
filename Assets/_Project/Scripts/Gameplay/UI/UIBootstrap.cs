@@ -35,6 +35,9 @@ namespace Beast.Gameplay
             if (Object.FindFirstObjectByType<QuestTracker>() == null) Host().AddComponent<QuestTracker>();
             if (Object.FindFirstObjectByType<Minimap>() == null) Host().AddComponent<Minimap>();
             if (Object.FindFirstObjectByType<GameMenu>() == null) Host().AddComponent<GameMenu>();
+            if (Object.FindFirstObjectByType<CraftingScreen>() == null) Host().AddComponent<CraftingScreen>();
+            if (Object.FindFirstObjectByType<StorageScreen>() == null) Host().AddComponent<StorageScreen>();
+            if (Object.FindFirstObjectByType<MirrorScreen>() == null) Host().AddComponent<MirrorScreen>();
         }
     }
 }

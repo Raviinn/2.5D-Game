@@ -39,6 +39,7 @@ namespace Beast.Gameplay
         PlayerStats stats;
         Inventory inventory;
         PlayerAppearance appearance;
+        GUIStyle figureName;
         DirectionalSpriteRenderer sprite;
         readonly List<SkillData> allSkills = new();
         readonly List<EquipmentData> spareGear = new();
@@ -228,7 +229,7 @@ namespace Beast.Gameplay
         string Glyph(SkillData skill)
         {
             for (int s = 0; s < PlayerSkills.SlotCount; s++)
-                if (skills.SlotSkill(s) == skill) return SlotKeys[s];
+                if (skills.SlotSkill(s) == skill) return UITheme.KeyLabel(SlotKeys[s]);
             return string.IsNullOrEmpty(skill.DisplayName) ? "?" : skill.DisplayName.Substring(0, 1).ToUpperInvariant();
         }
 
@@ -281,7 +282,7 @@ namespace Beast.Gameplay
                 {
                     bool equipped = skills.SlotSkill(s) == skill;
                     var rect = new Rect(x + s * (half + 12f), bottom.y, half, bottom.height);
-                    if (UITheme.BrushButton(rect, equipped ? $"On {SlotKeys[s]}" : $"Set {SlotKeys[s]}", !equipped, light: true))
+                    if (UITheme.BrushButton(rect, equipped ? $"On {UITheme.KeyLabel(SlotKeys[s])}" : $"Set {UITheme.KeyLabel(SlotKeys[s])}", !equipped, light: true))
                         skills.EquipToSlot(skill, s);
                 }
             }
@@ -314,6 +315,8 @@ namespace Beast.Gameplay
             // The character, standing in the middle (front view, idling).
             var figure = new Rect(area.center.x - 120f, area.y + 110f, 240f, 320f);
             DrawFigure(figure);
+            if (appearance != null)
+                GUI.Label(new Rect(figure.x - 40f, figure.yMax + 4f, figure.width + 80f, 30f), UITheme.Spaced(appearance.PlayerName), figureName ??= new GUIStyle(UITheme.InkHeader) { alignment = TextAnchor.MiddleCenter, fontSize = 22 });
 
             // Weapons and the accessory on the left, head / body / legs on the right.
             const float slotWidth = 300f, slotHeight = 92f, slotGap = 22f;

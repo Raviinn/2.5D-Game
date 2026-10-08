@@ -197,7 +197,7 @@ namespace Beast.Gameplay
         {
             UITheme.Fill(new Rect(0f, 0f, w, TopBarHeight), UITheme.Ink);
             float x = 40f;
-            x = KeyChip(x, "Q") + 18f;
+            x = KeyChip(x, UITheme.UsingGamepad ? "LB" : "Q") + 18f;
 
             var evt = Event.current;
             for (int i = 0; i < TabNames.Length; i++)
@@ -218,10 +218,10 @@ namespace Beast.Gameplay
                 GUI.Label(rect, label, UITheme.TabLabel);
                 UITheme.TabLabel.normal.textColor = UITheme.OffWhite;
                 GUI.color = old;
-                if (available && !active && UITheme.PaperClick(rect)) Open(tab);
+                if (available && !active && UITheme.PointerClick(rect)) Open(tab); // the pad uses LB / RB
                 x += width + 4f;
             }
-            KeyChip(x + 14f, "E");
+            KeyChip(x + 14f, UITheme.UsingGamepad ? "RB" : "E");
 
             // Right: renown and gold.
             string renown = progression != null ? $"Renown {progression.Renown}" : string.Empty;

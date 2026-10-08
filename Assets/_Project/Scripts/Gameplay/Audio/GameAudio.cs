@@ -10,7 +10,9 @@ namespace Beast.Gameplay
     ///   (footsteps on contact frames, swings on the strike frame, dodges, climbing).
     /// - Interface: button clicks, quest and level-up chimes.
     /// - Ambience: day / night loops crossfaded by the clock, rain over them, a quiet wind on the title screen.
-    /// Volumes follow Settings → Audio (master through AudioListener.volume; effects, ambience and interface here).
+    /// - Music: title, day and night themes crossfaded by state and clock; combat music while enemies are after you
+    ///   (holds a few seconds after the fight). Quieter while a menu is open.
+    /// Volumes follow Settings → Audio (master through AudioListener.volume; music, effects, ambience and interface here).
     /// </summary>
     public sealed class GameAudio : MonoBehaviour
     {
@@ -19,6 +21,11 @@ namespace Beast.Gameplay
         const int PoolSize = 24;
         const float HearingRange = 30f;
         const float AmbienceFadeSpeed = 0.35f; // volume per second
+        const float MusicFadeSpeed = 0.3f;
+        const float CombatFadeSpeed = 1.2f;
+        const float MusicLevel = 0.55f;
+        const float CombatRange = 20f;
+        const float CombatHold = 5f;        // seconds of combat music after the last enemy stops chasing
         /// <summary>Quest and level-up events raised while a save is being restored stay silent.</summary>
         const float QuietAfterLoad = 1.5f;
 
@@ -31,6 +38,9 @@ namespace Beast.Gameplay
         int nextSource;
 
         AudioSource day, night, rain, menu;
+        AudioSource musicA, musicB, musicCurrent;
+        float combatUntil, combatCheckAt;
+        Transform player;
         AudioListener fallbackListener;
         float quietUntil;
         float lastPickupSound;
@@ -56,6 +66,12 @@ namespace Beast.Gameplay
         public int SoundsPlayed { get; private set; }
         /// <summary>The library list the last sound came from (tests read it).</summary>
         public AudioClip LastClip { get; private set; }
+        /// <summary>The music track playing (or fading in) now; null when silent.</summary>
+        public AudioClip CurrentMusic => musicCurrent != null && musicCurrent.isPlaying ? musicCurrent.clip : null;
+        /// <summary>The music source's current volume (tests read it).</summary>
+        public float MusicVolumeNow => musicCurrent != null ? musicCurrent.volume : 0f;
+        /// <summary>True while combat music is wanted (enemies chasing you nearby, or just were).</summary>
+        public bool InCombat { get; private set; }
 
         void Awake()
         {
@@ -87,6 +103,9 @@ namespace Beast.Gameplay
             night = CreateLoop("Ambience Night", library.AmbienceNight);
             rain = CreateLoop("Ambience Rain", library.AmbienceRain);
             menu = CreateLoop("Ambience Menu", library.AmbienceMenu);
+            musicA = CreateLoop("Music A", null);
+            musicB = CreateLoop("Music B", null);
+            musicCurrent = musicA;
 
             fallbackListener = gameObject.AddComponent<AudioListener>();
             fallbackListener.enabled = false;
@@ -127,6 +146,8 @@ namespace Beast.Gameplay
             EventBus<QuestCompletedEvent>.Subscribe(OnQuestCompleted);
             EventBus<LevelUpEvent>.Subscribe(OnLevelUp);
             EventBus<SleptEvent>.Subscribe(OnSlept);
+            EventBus<PlayerLandedEvent>.Subscribe(OnLanded);
+            EventBus<ItemCraftedEvent>.Subscribe(OnCrafted);
             EventBus<GameLoadedEvent>.Subscribe(OnGameLoaded);
         }
 
@@ -143,6 +164,8 @@ namespace Beast.Gameplay
             EventBus<FarmActionEvent>.Unsubscribe(OnFarm);
             EventBus<QuestStartedEvent>.Unsubscribe(OnQuestStarted);
             EventBus<QuestReadyEvent>.Unsubscribe(OnQuestReady);
+            EventBus<PlayerLandedEvent>.Unsubscribe(OnLanded);
+            EventBus<ItemCraftedEvent>.Unsubscribe(OnCrafted);
             EventBus<QuestCompletedEvent>.Unsubscribe(OnQuestCompleted);
             EventBus<LevelUpEvent>.Unsubscribe(OnLevelUp);
             EventBus<SleptEvent>.Unsubscribe(OnSlept);
@@ -222,6 +245,7 @@ namespace Beast.Gameplay
                 if (pool[i].isPlaying) pool[i].volume = baseVolume[i] * (category[i] == Category.Interface ? ui : effects);
 
             UpdateAmbience();
+            UpdateMusic();
 
             if (Time.unscaledTime >= listenerCheckAt)
             {
@@ -255,6 +279,77 @@ namespace Beast.Gameplay
             Fade(night, nightTarget * ambience);
             Fade(rain, rainTarget * ambience);
             Fade(menu, menuTarget * ambience);
+        }
+
+        void UpdateMusic()
+        {
+            float volume = Services.TryGet(out SettingsService settings) ? settings.MusicVolume : 1f;
+            Services.TryGet(out GameStateService state);
+            bool inMenu = state == null || state.Current is GameState.MainMenu or GameState.Boot;
+            bool loading = state != null && state.Current == GameState.Loading;
+
+            AudioClip wanted = null;
+            float level = MusicLevel;
+            if (inMenu)
+            {
+                wanted = library.MusicMenu;
+                InCombat = false;
+            }
+            else if (!loading)
+            {
+                UpdateCombat();
+                float nightness = Services.TryGet(out WorldClock clock) ? Nightness(clock.Hour + clock.Minute / 60f) : 0f;
+                wanted = InCombat && library.MusicCombat != null ? library.MusicCombat : nightness > 0.5f ? library.MusicNight : library.MusicDay;
+                if (InCombat) level = 0.7f;
+                if (state.Current is GameState.Paused or GameState.InGameMenu) level *= 0.6f;
+            }
+
+            if (wanted != null && musicCurrent.clip != wanted)
+            {
+                // Crossfade: the other source starts the new track from the top while the current one fades out.
+                var next = musicCurrent == musicA ? musicB : musicA;
+                next.Stop();
+                next.clip = wanted;
+                next.volume = 0f;
+                next.time = 0f;
+                next.Play();
+                musicCurrent = next;
+            }
+
+            float speed = InCombat || musicCurrent.clip == library.MusicCombat ? CombatFadeSpeed : MusicFadeSpeed;
+            FadeMusic(musicA, musicA == musicCurrent && wanted != null ? level * volume : 0f, speed);
+            FadeMusic(musicB, musicB == musicCurrent && wanted != null ? level * volume : 0f, speed);
+        }
+
+        static void FadeMusic(AudioSource source, float target, float speed)
+        {
+            if (source.clip == null) return;
+            source.volume = Mathf.MoveTowards(source.volume, target, speed * Time.unscaledDeltaTime);
+            if (source.volume <= 0.001f && target <= 0f && source.isPlaying) source.Stop();
+        }
+
+        /// <summary>Any (non-dummy) enemy chasing or attacking within CombatRange keeps combat music going.</summary>
+        void UpdateCombat()
+        {
+            if (Time.unscaledTime >= combatCheckAt)
+            {
+                combatCheckAt = Time.unscaledTime + 0.25f;
+                if (player == null)
+                {
+                    var go = GameObject.FindWithTag("Player");
+                    player = go != null ? go.transform : null;
+                }
+                if (player != null)
+                    foreach (var enemy in EnemyController.Active)
+                    {
+                        if (enemy == null || enemy.Data == null || enemy.Data.IsTrainingDummy || enemy.Combatant.IsDead) continue;
+                        if (enemy.StateName is not ("Chase" or "Attack" or "Vault")) continue;
+                        if ((enemy.transform.position - player.position).sqrMagnitude > CombatRange * CombatRange) continue;
+                        combatUntil = Time.unscaledTime + CombatHold;
+                        break;
+                    }
+            }
+            InCombat = Time.unscaledTime < combatUntil;
         }
 
         /// <summary>0 by day, 1 at night, with an hour or two of crossfade at dusk (19-21) and dawn (5-7).</summary>
@@ -303,6 +398,8 @@ namespace Beast.Gameplay
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             quietUntil = Time.unscaledTime + QuietAfterLoad;
+            player = null;
+            combatUntil = 0f;
             weather = null;
             weatherSearchAt = 0f;
             EnsureListener();
@@ -360,6 +457,20 @@ namespace Beast.Gameplay
                     Play(library.Parry, at, 0.9f);
                     break;
             }
+        }
+
+        void OnCrafted(ItemCraftedEvent evt)
+        {
+            // Smithing rings like a blocked blow; brewing and cooking pour and stir.
+            if (evt.Recipe.Kind == CraftKind.Smithing) Play(library.Block, null, 0.8f, 1.15f);
+            else Play(library.Water, null, 0.7f, evt.Recipe.Kind == CraftKind.Alchemy ? 1.2f : 0.9f);
+        }
+
+        void OnLanded(PlayerLandedEvent evt)
+        {
+            // A heavy, low footstep; louder and deeper the further the drop.
+            float t = Mathf.InverseLerp(1f, 8f, evt.Drop);
+            Play(library.Footstep, null, Mathf.Lerp(0.5f, 1f, t), Mathf.Lerp(0.8f, 0.55f, t), 0.05f);
         }
 
         void OnDied(CombatantDiedEvent evt)

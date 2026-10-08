@@ -3,8 +3,8 @@ using UnityEngine;
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// Minimal non-combat NPC: idles and turns to face the player when they come close.
-    /// Drives the NPC's sprite. Schedules and dialogue come later.
+    /// Non-combat NPC: idles and turns to face the player when they come close; walks (the run clip, slowed) while an
+    /// NpcSchedule moves it. Drives the NPC's sprite.
     /// </summary>
     public sealed class NpcController : MonoBehaviour, ICharacterAnimationSource
     {
@@ -14,9 +14,12 @@ namespace Beast.Gameplay
         Transform player;
         Quaternion restRotation;
 
-        public CharacterAnim CurrentAnim => CharacterAnim.Idle;
+        /// <summary>Set by NpcSchedule while walking between places.</summary>
+        public bool Moving { get; set; }
+
+        public CharacterAnim CurrentAnim => Moving ? CharacterAnim.Run : CharacterAnim.Idle;
         public AttackExecutor Attacks => null;
-        public float AnimationSpeed => 1f;
+        public float AnimationSpeed => Moving ? 0.55f : 1f;
 
         void Awake() => restRotation = transform.rotation;
 
@@ -26,10 +29,17 @@ namespace Beast.Gameplay
             if (playerObject != null) player = playerObject.transform;
         }
 
+        /// <summary>The way to face when nobody's near (a schedule place's facing, or the walking direction).</summary>
+        public void SetRestRotation(Quaternion rotation, bool immediate)
+        {
+            restRotation = rotation;
+            if (immediate) transform.rotation = rotation;
+        }
+
         void Update()
         {
             var target = restRotation;
-            if (player != null)
+            if (player != null && !Moving)
             {
                 Vector3 toPlayer = player.position - transform.position;
                 toPlayer.y = 0f;

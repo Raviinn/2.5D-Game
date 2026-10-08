@@ -14,6 +14,8 @@ namespace Beast.Gameplay
         Climbing,
         /// <summary>Scripted move over an edge onto the top (also used to vault low ledges).</summary>
         PullingUp,
+        /// <summary>Scripted move from standing on a top edge down into a hang (or onto an ivy wall).</summary>
+        Lowering,
     }
 
     /// <summary>
@@ -23,6 +25,8 @@ namespace Beast.Gameplay
     /// - Hanging: move sideways to shimmy, Jump to pull up (if there's room), Jump + away to leap off, Dodge/Sprint to let go.
     /// - Walls with a ClimbableSurface (ivy) can be climbed: Jump at the wall to grab on, move to climb,
     ///   reach the top to pull up, touch the ground to step off.
+    /// - Climbing down: stand still at a top edge facing the drop and press Jump to lower yourself into a hang
+    ///   (or onto the wall, if it's ivy). Drops too shallow to hang from are just stepped off.
     /// Everything costs stamina; at zero you fall. Taking a hit knocks you off.
     /// While active, combat and normal movement are suspended (PlayerCombat.Traversing, PlayerMotor.Suspended).
     /// </summary>
@@ -79,10 +83,12 @@ namespace Beast.Gameplay
         Vector3 wallNormal;              // climbing: current wall
         Vector3 pullFrom, pullMid, pullTo;
         float pullTime, pullDuration;
+        float pullSplit;                 // share of the scripted move spent on its first leg
         float regrabAt;
         float moveAmount;                // 0..1, drives the animation speed
         float nextHintCheck;
         bool climbableAhead;
+        bool dropAhead;
         float noRoomUntil;
         readonly List<(string key, string label)> hints = new();
 
@@ -157,7 +163,8 @@ namespace Beast.Gameplay
                 case ClimbMode.None: TryStart(); break;
                 case ClimbMode.Hanging: UpdateHang(dt); break;
                 case ClimbMode.Climbing: UpdateClimb(dt); break;
-                case ClimbMode.PullingUp: UpdatePullUp(dt); break;
+                case ClimbMode.PullingUp:
+                case ClimbMode.Lowering: UpdatePullUp(dt); break;
             }
             UpdateHints();
         }
@@ -178,6 +185,14 @@ namespace Beast.Gameplay
                 FindClimbableWall(root, forward, out var wall))
             {
                 StartClimb(wall);
+                return;
+            }
+
+            // Climbing down: standing still at a top edge, facing the drop.
+            if (jumpAction.WasPressedThisFrame() && motor.IsGrounded && IsStill() &&
+                FindDropEdge(root, transform.forward, out var drop))
+            {
+                StartLowering(drop);
                 return;
             }
 
@@ -304,6 +319,7 @@ namespace Beast.Gameplay
             pullFrom = transform.position;
             pullTo = StandRoot(top);
             pullMid = new Vector3(pullFrom.x, pullTo.y + 0.05f, pullFrom.z);
+            pullSplit = 0.65f; // up first (hands on the edge), then forward onto the top
             pullTime = 0f;
             // Vaulting a low edge is quicker than hauling yourself up from a full hang.
             pullDuration = Mathf.Lerp(0.3f, pullUpDuration, Mathf.InverseLerp(0.5f, handReach, pullTo.y - pullFrom.y));
@@ -314,13 +330,76 @@ namespace Beast.Gameplay
         {
             pullTime += dt;
             float t = Mathf.Clamp01(pullTime / pullDuration);
-            // Up first (hands on the edge), then forward onto the top.
-            Vector3 position = t < 0.65f
-                ? Vector3.Lerp(pullFrom, pullMid, Smooth(t / 0.65f))
-                : Vector3.Lerp(pullMid, pullTo, Smooth((t - 0.65f) / 0.35f));
+            Vector3 position = t < pullSplit
+                ? Vector3.Lerp(pullFrom, pullMid, Smooth(t / pullSplit))
+                : Vector3.Lerp(pullMid, pullTo, Smooth((t - pullSplit) / (1f - pullSplit)));
             motor.Place(position);
             moveAmount = 1f;
-            if (t >= 1f) Release();
+            if (t < 1f) return;
+            if (Mode == ClimbMode.Lowering) FinishLowering();
+            else Release();
+        }
+
+        // ---------- Climbing down ----------
+
+        bool IsStill() => motor.RawInput.sqrMagnitude < 0.04f;
+
+        /// <summary>
+        /// A top edge right in front of 'root' (standing on it) with a drop below deep enough to hang from.
+        /// The edge returned is the one you'd hang from, its normal pointing out over the drop.
+        /// </summary>
+        public bool FindDropEdge(Vector3 root, Vector3 forward, out Ledge edge)
+        {
+            edge = default;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f) return false;
+            forward.Normalize();
+
+            // The top we stand on.
+            if (!Cast(root, Vector3.down, HalfHeight + 0.3f, out var ground) || ground.normal.y < 0.7f || IsBlocked(ground.collider)) return false;
+            float top = ground.point.y;
+
+            // Nothing to stand on just ahead.
+            var ahead = new Vector3(root.x, top + 0.3f, root.z) + forward * (Radius + 0.45f);
+            if (Cast(ahead, Vector3.down, 0.3f + grabMinHeight, out _)) return false;
+
+            // The wall face under the edge: look back toward us from out over the drop, just below the top.
+            var beyond = new Vector3(root.x, top - 0.25f, root.z) + forward * (Radius + 0.8f);
+            if (!Cast(beyond, -forward, Radius + 0.8f, out var wall) || !IsWallLike(wall.normal) || IsBlocked(wall.collider)) return false;
+            Vector3 normal = Flat(wall.normal);
+            if (Vector3.Dot(normal, forward) < 0.5f) return false;
+
+            edge = new Ledge { Point = new Vector3(wall.point.x, top, wall.point.z), Normal = normal, Wall = wall.collider };
+            Vector3 hang = HangRoot(edge);
+            // Too shallow to hang from (your feet would be on the ground): just step off instead.
+            return IsClear(hang) && !Cast(hang, Vector3.down, HalfHeight + 0.3f, out _);
+        }
+
+        void StartLowering(Ledge top)
+        {
+            Enter(ClimbMode.Lowering);
+            ledge = top;
+            pullFrom = transform.position;
+            pullTo = HangRoot(top);
+            pullMid = new Vector3(pullTo.x, pullFrom.y, pullTo.z);
+            pullSplit = 0.35f; // out over the edge first, then down
+            pullTime = 0f;
+            pullDuration = pullUpDuration;
+            transform.rotation = Quaternion.LookRotation(-top.Normal); // turn to face the wall
+        }
+
+        void FinishLowering()
+        {
+            moveAmount = 0f;
+            if (IsClimbable(ledge.Wall))
+            {
+                Mode = ClimbMode.Climbing;
+                wallNormal = ledge.Normal;
+            }
+            else
+            {
+                Mode = ClimbMode.Hanging;
+            }
         }
 
         static float Smooth(float t) => t * t * (3f - 2f * t);
@@ -419,10 +498,12 @@ namespace Beast.Gameplay
                     if (Time.unscaledTime >= nextHintCheck)
                     {
                         nextHintCheck = Time.unscaledTime + HintRefresh;
-                        climbableAhead = motor.IsGrounded && combat != null && combat.CanStartTraversal &&
-                                         FindClimbableWall(transform.position, transform.forward, out _);
+                        bool canStart = motor.IsGrounded && combat != null && combat.CanStartTraversal;
+                        climbableAhead = canStart && FindClimbableWall(transform.position, transform.forward, out _);
+                        dropAhead = canStart && !climbableAhead && IsStill() && FindDropEdge(transform.position, transform.forward, out _);
                     }
                     if (climbableAhead) hints.Add(("Space", "Climb"));
+                    else if (dropAhead) hints.Add(("Space", "Climb down"));
                     break;
             }
         }

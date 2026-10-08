@@ -103,6 +103,7 @@ namespace Beast.Gameplay
 
         void DetectHits(AttackData attack)
         {
+            if (attack.HitboxSize == Vector3.zero) return; // no melee hitbox (a bow shot: the arrow does the hitting)
             TryGetHitbox(out var center, out var rotation, out var size);
             int count = Physics.OverlapBoxNonAlloc(center, size * 0.5f, overlapBuffer, rotation, hitMask, QueryTriggerInteraction.Collide);
 

@@ -936,6 +936,17 @@
                 },
                 {
                     "name": "",
+                    "id": "5b0e7d0a-3c1f-4b8e-9d64-2f7a1c9e4b31",
+                    "path": "<Gamepad>/buttonEast",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Resume",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "6998efce-cb72-4b9d-b700-60f47dafb689",
                     "path": "<Keyboard>/tab",
                     "interactions": "",

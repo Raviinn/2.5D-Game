@@ -155,7 +155,7 @@ namespace Beast.Gameplay
 
             var view = new Rect(area.x, area.y + 62f, area.width, area.height - 62f);
             var content = new Rect(0f, 0f, view.width - 18f, Mathf.Max(1, rows.Count) * (RowHeight + 8f));
-            listScroll = GUI.BeginScrollView(view, listScroll, content);
+            listScroll = UITheme.BeginScroll(view, listScroll, content);
 
             if (rows.Count == 0)
             {
@@ -191,7 +191,7 @@ namespace Beast.Gameplay
                     confirmAbandon = false;
                 }
             }
-            GUI.EndScrollView();
+            UITheme.EndScroll(ref listScroll, view);
         }
 
         string StatusText(QuestData quest, bool onRed)
@@ -254,9 +254,9 @@ namespace Beast.Gameplay
                           $"\n\n<color={UITheme.InkGoldHex}>Reward</color>\n{QuestText.Rewards(quest)}{target}";
             float bodyHeight = bodyStyle.CalcHeight(new GUIContent(body), width - 20f);
             var bodyView = new Rect(x, y, width, area.yMax - y - (active ? 104f : 20f));
-            detailScroll = GUI.BeginScrollView(bodyView, detailScroll, new Rect(0f, 0f, width - 20f, bodyHeight));
+            detailScroll = UITheme.BeginScroll(bodyView, detailScroll, new Rect(0f, 0f, width - 20f, bodyHeight));
             GUI.Label(new Rect(0f, 0f, width - 20f, bodyHeight), body, bodyStyle);
-            GUI.EndScrollView();
+            UITheme.EndScroll(ref detailScroll, bodyView);
 
             if (active) DrawActions(new Rect(x, area.yMax - 82f, width, 52f), quest);
         }

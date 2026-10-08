@@ -21,7 +21,6 @@ namespace Beast.Gameplay
         enum Page { Home, NewGame, LoadGame, Create }
         enum Confirm { None, Overwrite, Delete }
 
-        static readonly string[] WeaponNames = { "Sword & Shield", "Greatsword" };
         const float ItemSpacing = 56f;
 
         readonly SlotInfo[] slots = new SlotInfo[SaveService.SlotCount];
@@ -40,12 +39,7 @@ namespace Beast.Gameplay
 
         // Character creator
         int createSlot = -1;
-        CharacterAppearance look = new();
-        WeaponLook previewWeapon;
-        int previewDirection;
-        Texture2D previewSheet;
-        CharacterAppearance previewAppearance;
-        WeaponLook previewSheetWeapon;
+        readonly LookEditor editor = new();
 
         GameStateService state;
         SaveService save;
@@ -81,8 +75,9 @@ namespace Beast.Gameplay
 
         void OnDestroy()
         {
-            foreach (var tex in new[] { sky, clouds, farHills, nearHills, previewSheet })
+            foreach (var tex in new[] { sky, clouds, farHills, nearHills })
                 if (tex != null) Destroy(tex);
+            editor.Dispose();
         }
 
         /// <summary>Re-reads every slot from disk.</summary>
@@ -158,14 +153,14 @@ namespace Beast.Gameplay
         public void OpenCreator(int slot)
         {
             createSlot = slot;
-            look = new CharacterAppearance();
-            previewWeapon = WeaponLook.SwordAndShield;
-            previewDirection = 0;
+            editor.Begin(new CharacterAppearance(), WeaponLook.SwordAndShield);
             Open(Page.Create);
         }
 
         /// <summary>Test hook: the look being edited in the creator.</summary>
-        public CharacterAppearance CreatorLook => look;
+        public CharacterAppearance CreatorLook => editor.Look;
+        /// <summary>Test hook: the creator's editor (preview sheet, facing, weapon).</summary>
+        public LookEditor Creator => editor;
 
         void Open(Page next)
         {
@@ -208,11 +203,12 @@ namespace Beast.Gameplay
                 return;
             }
 
-            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape && page != Page.Home)
+            bool escape = Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape;
+            if ((escape || (page != Page.Home && UITheme.ConsumeNavBack())) && page != Page.Home)
             {
                 if (confirm != Confirm.None) confirm = Confirm.None;
                 else Open(page == Page.Create ? Page.NewGame : Page.Home);
-                Event.current.Use();
+                if (escape) Event.current.Use();
             }
 
             if (page == Page.Home) DrawHome();
@@ -264,7 +260,8 @@ namespace Beast.Gameplay
             var evt = Event.current;
             if (evt.type == EventType.KeyDown)
             {
-                int step = evt.keyCode is KeyCode.DownArrow or KeyCode.S ? 1 : evt.keyCode is KeyCode.UpArrow or KeyCode.W ? -1 : 0;
+                // Arrows belong to the pad / arrow-key navigation (UINavigator); W / S still move the swash directly.
+                int step = evt.keyCode is KeyCode.S ? 1 : evt.keyCode is KeyCode.W ? -1 : 0;
                 if (step != 0)
                 {
                     for (int i = 0, next = highlighted; i < items.Count; i++)
@@ -274,7 +271,7 @@ namespace Beast.Gameplay
                     }
                     evt.Use();
                 }
-                else if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter or KeyCode.Space && items[highlighted].Enabled)
+                else if ((evt.keyCode == KeyCode.Space || (!UITheme.NavShowing && evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter)) && items[highlighted].Enabled)
                 {
                     evt.Use();
                     items[highlighted].Choose();
@@ -285,7 +282,7 @@ namespace Beast.Gameplay
             for (int i = 0; i < items.Count; i++)
             {
                 var row = new Rect(x, y + i * ItemSpacing, 440f, 50f);
-                if (items[i].Enabled && row.Contains(evt.mousePosition)) highlighted = i;
+                if (items[i].Enabled && (row.Contains(evt.mousePosition) || UITheme.IsNavFocused(row))) highlighted = i;
             }
 
             for (int i = 0; i < items.Count; i++)
@@ -305,7 +302,7 @@ namespace Beast.Gameplay
                     UITheme.ShadowLabel(text, UITheme.Spaced(item.Label), UITheme.MenuItem, UITheme.OffWhite);
                 }
                 GUI.color = old;
-                if (item.Enabled && UITheme.PaperClick(row))
+                if (item.Enabled && UITheme.NavClick(row, preferred: i == highlighted, drawFocus: false)) // the swash shows the focus
                 {
                     item.Choose();
                     return;
@@ -424,100 +421,16 @@ namespace Beast.Gameplay
 
         void DrawCreator()
         {
-            var content = UITheme.ParchmentWindow(1000f, 640f, "Create your hero", $"New game in slot {createSlot + 1}", backdrop: false);
-
-            // Preview: the real in-game sprite, idling, turnable, on an ink stage.
-            var stage = new Rect(content.x, content.y, 320f, content.height - 70f);
-            UITheme.InkPanel(stage);
-            DrawPreview(new Rect(stage.center.x - 120f, stage.y + 26f, 240f, 320f));
-            if (UITheme.BrushButton(new Rect(stage.x + 18f, stage.yMax - 60f, 64f, 42f), "‹", light: true)) previewDirection = (previewDirection + 1) % 8;
-            var oldColor = GUI.color;
-            GUI.color = new Color(1f, 1f, 1f, 0.7f);
-            GUI.Label(new Rect(stage.x + 94f, stage.yMax - 60f, stage.width - 188f, 42f), UITheme.Spaced("Turn"), centredInkBody);
-            GUI.color = oldColor;
-            if (UITheme.BrushButton(new Rect(stage.xMax - 82f, stage.yMax - 60f, 64f, 42f), "›", light: true)) previewDirection = (previewDirection + 7) % 8;
-
-            float x = stage.xMax + 32f;
-            const float labelWidth = 160f;
-            float fieldX = x + labelWidth;
-            float fieldWidth = content.xMax - fieldX;
-            float y = content.y + 8f;
-            const float rowGap = 74f;
-
-            Label(x, y, "Hair");
-            look.hairStyle = UITheme.PaperStepper(new Rect(fieldX, y, fieldWidth, 44f), look.hairStyle, CharacterAppearance.HairStyleNames.Length,
-                CharacterAppearance.HairStyleNames[look.hairStyle]);
-            y += rowGap;
-
-            Label(x, y, "Hair colour");
-            look.hairColor = Swatches(new Rect(fieldX, y, fieldWidth, 44f), look.hairColor, CharacterAppearance.HairColors);
-            GUI.Label(new Rect(fieldX, y + 46f, fieldWidth, 22f), CharacterAppearance.HairColorNames[look.hairColor], UITheme.PaperMuted);
-            y += rowGap + 8f;
-
-            Label(x, y, "Skin");
-            look.skinTone = Swatches(new Rect(fieldX, y, fieldWidth, 44f), look.skinTone, CharacterAppearance.SkinTones);
-            GUI.Label(new Rect(fieldX, y + 46f, fieldWidth, 22f), CharacterAppearance.SkinToneNames[look.skinTone], UITheme.PaperMuted);
-            y += rowGap + 8f;
-
-            Label(x, y, "Outfit");
-            look.outfit = UITheme.PaperStepper(new Rect(fieldX, y, fieldWidth, 44f), look.outfit, CharacterAppearance.Outfits.Length,
-                CharacterAppearance.Outfits[look.outfit].Name);
-            y += rowGap;
-
-            Label(x, y, "Preview with");
-            previewWeapon = (WeaponLook)UITheme.PaperOptions(new Rect(fieldX, y, fieldWidth, 44f), (int)previewWeapon, WeaponNames);
-            GUI.Label(new Rect(fieldX, y + 50f, fieldWidth, 40f), "In the world you carry whichever weapon you have equipped.", UITheme.PaperMuted);
+            var content = UITheme.ParchmentWindow(1000f, 680f, "Create your hero", $"New game in slot {createSlot + 1}", backdrop: false);
+            editor.DrawStage(new Rect(content.x, content.y, 320f, content.height - 70f));
+            float y = editor.DrawFields(new Rect(content.x + 352f, content.y + 4f, content.width - 352f, content.height - 70f), weaponPreview: true);
+            GUI.Label(new Rect(content.x + 512f, y, content.width - 512f, 40f), "In the world you carry whichever weapon you have equipped.", UITheme.PaperMuted);
 
             float footerY = content.yMax - 48f;
             if (UITheme.BrushButton(new Rect(content.x, footerY, 170f, 48f), "Back")) Open(Page.NewGame);
-            if (UITheme.BrushButton(new Rect(content.x + 182f, footerY, 220f, 48f), "Randomise")) look = CharacterAppearance.Random();
+            if (UITheme.BrushButton(new Rect(content.x + 182f, footerY, 220f, 48f), "Randomise")) editor.Randomise();
             if (UITheme.BrushButton(new Rect(content.xMax - 320f, footerY, 320f, 48f), "Begin your journey"))
-                StartNewGame(createSlot, look);
-        }
-
-        void Label(float x, float y, string text) => GUI.Label(new Rect(x, y, 160f, 44f), text, paperLabel);
-
-        /// <summary>A row of colour squares on parchment; the chosen one has a vermilion frame. Returns the chosen index.</summary>
-        static int Swatches(Rect rect, int selected, Color32[] colors)
-        {
-            float size = Mathf.Min(rect.height, (rect.width - 10f * (colors.Length - 1)) / colors.Length);
-            for (int i = 0; i < colors.Length; i++)
-            {
-                var cell = new Rect(rect.x + i * (size + 10f), rect.y, size, size);
-                bool chosen = i == selected;
-                UITheme.Fill(cell, chosen ? UITheme.Vermilion : UITheme.Ink);
-                float inset = chosen ? 4f : 1.5f;
-                UITheme.Fill(new Rect(cell.x + inset, cell.y + inset, cell.width - inset * 2f, cell.height - inset * 2f), colors[i]);
-                if (UITheme.PaperClick(cell)) selected = i;
-            }
-            return selected;
-        }
-
-        /// <summary>One frame of the idle clip, facing previewDirection (0 = toward you), drawn from a sheet built for the current look.</summary>
-        void DrawPreview(Rect rect)
-        {
-            if (previewSheet == null || previewAppearance == null || !previewAppearance.SameAs(look) || previewSheetWeapon != previewWeapon)
-            {
-                if (previewSheet != null) Destroy(previewSheet);
-                previewSheet = CharacterSpriteBuilder.Build(look.ToPalette(previewWeapon));
-                previewAppearance = look.Clone();
-                previewSheetWeapon = previewWeapon;
-            }
-
-            var idle = CharacterSpriteBuilder.Layout[0];
-            int frame = idle.Start + (int)(Time.unscaledTime * idle.Fps) % idle.Count;
-            int row = previewDirection > 4 ? 8 - previewDirection : previewDirection;
-            bool flip = previewDirection > 4;
-
-            float w = previewSheet.width, h = previewSheet.height;
-            float cellW = CharacterSpriteBuilder.CellWidth / w, cellH = CharacterSpriteBuilder.CellHeight / h;
-            float u = frame * cellW;
-            float v = (h - (row + 1) * CharacterSpriteBuilder.CellHeight) / h;
-            var uv = flip ? new Rect(u + cellW, v, -cellW, cellH) : new Rect(u, v, cellW, cellH);
-
-            // A soft pool of light under the feet.
-            UITheme.DrawIcon(new Rect(rect.center.x - 80f, rect.yMax - 24f, 160f, 30f), UITheme.CircleIcon, new Color(1f, 1f, 1f, 0.08f));
-            GUI.DrawTextureWithTexCoords(rect, previewSheet, uv);
+                StartNewGame(createSlot, editor.Look);
         }
 
         // ---------- Storm backdrop (placeholder art drawn in code) ----------

@@ -50,6 +50,10 @@ public sealed class MenuHarness : MonoBehaviour
         menu.Refresh();
         Check(menu != null && state.Current == GameState.MainMenu, $"boot goes to the main menu ({SceneManager.GetActiveScene().name}, {state.Current})");
         Check(Cursor.visible, "cursor is visible on the menu");
+        yield return new WaitForSecondsRealtime(2f);
+        var audio = GameAudio.Instance;
+        Check(audio != null && audio.Library.MusicMenu != null && audio.CurrentMusic == audio.Library.MusicMenu && audio.MusicVolumeNow > 0.05f,
+            $"the title music plays ({(audio != null && audio.CurrentMusic != null ? audio.CurrentMusic.name : "none")}, volume {(audio != null ? audio.MusicVolumeNow : 0f):0.00})");
         Check(save.MostRecentSlot() == -1, "no saves: nothing to continue");
         yield return Shot("1_menu_empty");
 

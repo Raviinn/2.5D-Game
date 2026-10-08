@@ -47,6 +47,7 @@ namespace Beast.Gameplay
 
             combatant.Heal(item.Heal);
             if (stamina != null) stamina.Restore(item.Stamina);
+            if (item.HasBuff && TryGetComponent(out PlayerBuffs buffs)) buffs.Apply(item);
             lastUseTime = Time.unscaledTime;
             EventBus<ItemUsedEvent>.Raise(new ItemUsedEvent(item));
             return true;

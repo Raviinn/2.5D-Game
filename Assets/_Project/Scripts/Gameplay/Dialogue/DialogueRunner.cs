@@ -29,6 +29,7 @@ namespace Beast.Gameplay
         Inventory inventory;
         PlayerProgression progression;
         Reputation reputation;
+        PlayerAppearance playerAppearance;
         DialogueSpeaker currentSpeaker;
         Shopkeeper pendingShop;
         readonly List<string> choices = new();
@@ -92,6 +93,7 @@ namespace Beast.Gameplay
                 inventory = player.GetComponent<Inventory>();
                 progression = player.GetComponent<PlayerProgression>();
                 reputation = player.GetComponent<Reputation>();
+                playerAppearance = player.GetComponent<PlayerAppearance>();
             }
         }
 
@@ -213,6 +215,7 @@ namespace Beast.Gameplay
                 (object)(progression != null && Enum.TryParse(name, true, out Discipline d) ? progression.Level(d) : 0), true);
             story.BindExternalFunction("standing", () => (object)(reputation != null ? reputation.Standing : 0), true);
             story.BindExternalFunction("standing_tier", () => (object)(reputation != null ? reputation.TierIndex : 0), true);
+            story.BindExternalFunction("player_name", () => (object)(playerAppearance != null ? playerAppearance.PlayerName : CharacterAppearance.DefaultName), true);
 
             // Actions
             story.BindExternalFunction("start_quest", (string id) => (object)(Quest(id) is { } quest && quests != null && quests.StartQuest(quest)));

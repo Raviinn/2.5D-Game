@@ -110,6 +110,57 @@ namespace Beast.Gameplay
             return true;
         }
 
+        /// <summary>How many of this item you're wearing or wielding (0–2: the same weapon can fill both hands' slots).</summary>
+        public int EquippedCount(EquipmentData item)
+        {
+            if (item == null) return 0;
+            int count = 0;
+            if (item is WeaponData)
+            {
+                for (int i = 0; i < WeaponSlots; i++) if (weapons[i] == item) count++;
+            }
+            else if (armor.TryGetValue(item.Slot, out var worn) && worn == item) count++;
+            return count;
+        }
+
+        /// <summary>Takes an equipped item off and away (used up by crafting). False if it isn't equipped.</summary>
+        public bool RemoveEquipped(EquipmentData item)
+        {
+            if (item is WeaponData)
+            {
+                int index = weapons[activeWeapon] == item ? activeWeapon : weapons[1 - activeWeapon] == item ? 1 - activeWeapon : -1;
+                if (index < 0) return false;
+                weapons[index] = null;
+                if (weapons[activeWeapon] == null && weapons[1 - activeWeapon] != null) activeWeapon = 1 - activeWeapon;
+            }
+            else
+            {
+                if (item == null || !armor.TryGetValue(item.Slot, out var worn) || worn != item) return false;
+                armor.Remove(item.Slot);
+            }
+            NotifyChanged();
+            return true;
+        }
+
+        /// <summary>Swaps an equipped item for another of the same kind in the same slot (crafting upgrades).</summary>
+        public bool ReplaceEquipped(EquipmentData current, EquipmentData replacement)
+        {
+            if (current == null || replacement == null || (current is WeaponData) != (replacement is WeaponData)) return false;
+            if (current is WeaponData)
+            {
+                int index = weapons[activeWeapon] == current ? activeWeapon : weapons[1 - activeWeapon] == current ? 1 - activeWeapon : -1;
+                if (index < 0) return false;
+                weapons[index] = (WeaponData)replacement;
+            }
+            else
+            {
+                if (replacement.Slot != current.Slot || !armor.TryGetValue(current.Slot, out var worn) || worn != current) return false;
+                armor[current.Slot] = replacement;
+            }
+            NotifyChanged();
+            return true;
+        }
+
         /// <summary>Switches to the other weapon (and its combat style). False if there's only one.</summary>
         public bool SwapWeapons()
         {

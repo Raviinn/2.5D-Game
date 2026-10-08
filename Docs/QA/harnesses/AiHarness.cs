@@ -21,6 +21,7 @@ public sealed class AiHarness : MonoBehaviour
     Combatant me;
     ThirdPersonCamera rig;
     readonly List<EnemyController> bandits = new();
+    EnemyController archer;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -46,6 +47,7 @@ public sealed class AiHarness : MonoBehaviour
     void ParkAll()
     {
         for (int i = 0; i < bandits.Count; i++) bandits[i].Warp(Parking + Vector3.right * (i * 3f), true);
+        if (archer != null) archer.Warp(Parking + Vector3.forward * 6f, true);
     }
 
     IEnumerator Start()
@@ -60,7 +62,11 @@ public sealed class AiHarness : MonoBehaviour
         motor = player.GetComponent<PlayerMotor>();
         me = player.GetComponent<Combatant>();
         rig = FindFirstObjectByType<ThirdPersonCamera>();
-        foreach (var e in EnemyController.Active) if (!e.Data.IsTrainingDummy) bandits.Add(e);
+        foreach (var e in EnemyController.Active)
+        {
+            if (e.Data.IsTrainingDummy) continue;
+            if (e.Data.Ranged) archer = e; else bandits.Add(e);
+        }
 
         Check(Services.TryGet(out WorldNavigation nav) && nav.IsReady, $"navigation mesh built ({(nav != null ? nav.TriangleCount : 0)} triangles)");
         Check(bandits.Count >= 3, $"{bandits.Count} bandits in the world (Bandit_C added)");
@@ -168,9 +174,112 @@ public sealed class AiHarness : MonoBehaviour
         Check(attacked[0] && attacked[1] && attacked[2], $"every bandit got a turn ({swings} swings in 16 s)");
         Check(gapSum / gapSamples > 1.5f && minGap > 0.5f, $"bandits keep apart (average gap {gapSum / gapSamples:0.0} m, closest {minGap:0.0} m)");
 
+        yield return JumpLinkAndArcherTests(nav, open);
+
         me.Invulnerable = false;
         Debug.Log($"[AiTest] done, failures={failures}");
         Application.Quit();
+    }
+
+    // ---------- Milestone 25: jump links & archers ----------
+
+    IEnumerator JumpLinkAndArcherTests(WorldNavigation nav, Vector3 open)
+    {
+        Check(nav != null && nav.VaultLinkCount > 0 && nav.DropLinkCount > 0,
+            $"jump links built ({nav?.VaultLinkCount} two-way vaults, {nav?.DropLinkCount} drops)");
+        var runner = bandits[0];
+
+        // ---- E: the player on the 2.3 m block: a bandit vaults up after them ----
+        ParkAll();
+        me.Invulnerable = true;
+        PlaceAt(new Vector3(O.x + 5f, 2.3f + 1.1f, O.z - 0.5f), 90f);
+        runner.Warp(new Vector3(O.x + 10f, 1.1f, O.z - 0.5f), true);
+        bool vaulted = false, swung = false;
+        float start = Time.time;
+        while (Time.time - start < 10f && !swung)
+        {
+            vaulted |= runner.IsVaulting;
+            swung |= runner.Attacks.IsAttacking && runner.transform.position.y > 2.8f;
+            yield return null;
+        }
+        Check(vaulted && runner.transform.position.y > 2.8f, $"bandit vaults onto the 2.3 m block (y {runner.transform.position.y:0.00})");
+        Check(swung, "and attacks the player up there");
+        yield return Shot("e1_vaulted");
+
+        // ---- F: a bandit on the 3.2 m wall jumps down to reach the player ----
+        ParkAll();
+        PlaceAt(new Vector3(O.x + 6f, 1.1f, O.z + 2f), -90f);
+        runner.Warp(new Vector3(O.x + 1f, 3.2f + 1.1f, O.z + 2f), true);
+        start = Time.time;
+        bool reached = false;
+        while (Time.time - start < 8f && !reached)
+        {
+            reached = runner.transform.position.y < 1.5f && Flat(runner.transform.position - player.transform.position).magnitude < 2.8f;
+            yield return null;
+        }
+        Check(reached, $"bandit jumps down from the 3.2 m wall to reach the player (y {runner.transform.position.y:0.00})");
+
+        // ---- G: the player on the 3.2 m wall is still out of melee reach (too high to vault) ----
+        Check(!nav.CanReach(new Vector3(O.x + 6f, 0f, O.z + 2f), new Vector3(O.x + 1f, 3.2f, O.z + 2f)),
+            "the 3.2 m wall top can't be reached on foot");
+
+        if (archer == null)
+        {
+            Check(false, "Bandit_Archer exists");
+            yield break;
+        }
+        Check(archer.Data.Ranged && archer.Attacks != null, "Bandit_Archer is ranged");
+
+        // ---- H: the archer shoots the player standing on the wall (melee bandits can't reach) ----
+        ParkAll();
+        me.Invulnerable = false;
+        me.Heal(9999f);
+        PlaceAt(new Vector3(O.x + 1f, 3.2f + 1.1f, O.z), 90f);
+        archer.Warp(new Vector3(O.x + 13f, 1.1f, O.z), true);
+        float before = me.Health;
+        int arrows = 0;
+        bool drew = false, sawDraw = false;
+        start = Time.time;
+        while (Time.time - start < 9f)
+        {
+            bool drawing = archer.Attacks.CurrentPhase == AttackExecutor.Phase.Startup;
+            if (drawing && !drew) arrows++;
+            drew = drawing;
+            if (drawing && archer.Combatant.Telegraphing && !sawDraw && Time.time - start > 1f)
+            {
+                sawDraw = true;
+                yield return Shot("h1_archer_draws");
+            }
+            yield return null;
+        }
+        Check(archer.CanSeePlayer, "the archer sees the player on the wall");
+        Check(arrows >= 2, $"the archer keeps shooting ({arrows} shots in 9 s)");
+        Check(me.Health < before, $"arrows hit the player on the wall ({before:0} -> {me.Health:0} HP)");
+        Check(archer.StateName != "Return", $"the archer doesn't give up while it can see you ({archer.StateName})");
+        yield return Shot("h2_arrows");
+
+        // ---- I: the archer backs off when you close in ----
+        ParkAll();
+        me.Invulnerable = true;
+        PlaceAt(open, 90f);
+        archer.Warp(open + new Vector3(4f, 0f, 0f), true);
+        yield return Wait(4f);
+        float gap = Flat(archer.transform.position - player.transform.position).magnitude;
+        Check(gap > 6f, $"the archer backs away to shooting distance ({gap:0.0} m)");
+
+        // ---- J: no line of sight -> it moves until it can see you ----
+        ParkAll();
+        me.Invulnerable = true;
+        PlaceAt(new Vector3(O.x - 7f, 1.1f, O.z), 90f); // west of the ivy cliff
+        archer.Warp(new Vector3(O.x + 5f, 1.1f, O.z), true); // east of it: the cliff and wall block the view
+        bool blindAtStart = Physics.Linecast(archer.transform.position + Vector3.up * 0.6f, player.transform.position + Vector3.up * 0.3f, 1, QueryTriggerInteraction.Ignore);
+        yield return Wait(0.3f);
+        start = Time.time;
+        while (Time.time - start < 12f && !archer.CanSeePlayer) yield return null;
+        Check(blindAtStart && archer.CanSeePlayer, $"an archer without a view walks round until it has one ({Time.time - start:0.0} s)");
+
+        me.Invulnerable = false;
+        ParkAll();
     }
 
     static Vector3 Flat(Vector3 v) => new(v.x, 0f, v.z);

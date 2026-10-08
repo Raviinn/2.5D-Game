@@ -46,5 +46,11 @@ namespace Beast.Gameplay
         public AudioClip AmbienceNight;
         public AudioClip AmbienceRain;
         public AudioClip AmbienceMenu;
+
+        [Header("Music loops (Milestone 33)")]
+        public AudioClip MusicMenu;
+        public AudioClip MusicDay;
+        public AudioClip MusicNight;
+        public AudioClip MusicCombat;
     }
 }
