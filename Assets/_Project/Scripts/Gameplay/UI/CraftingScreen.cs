@@ -9,6 +9,7 @@ namespace Beast.Gameplay
     /// The workbench window, on parchment: Alchemy / Cooking / Smithing cards on the left, that kind's recipes on the
     /// right with what each needs (what you have in red when it's short), what it does, and Craft / ×5 buttons.
     /// Opened by a Workbench; the game is paused (InGameMenu) while it's open. Esc leaves.
+    /// Smithing also lists worn gear you own, to mend with Iron Scrap (Milestone 44).
     /// </summary>
     public sealed class CraftingScreen : MonoBehaviour
     {
@@ -25,10 +26,13 @@ namespace Beast.Gameplay
         Workbench bench;
         Inventory inventory;
         PlayerEquipment equipment;
+        GearCondition condition;
+        ItemData scrap;
         GameStateService state;
         CraftKind kind;
         Vector2 scroll;
         readonly List<RecipeData> shown = new();
+        readonly List<EquipmentData> worn = new();
         readonly StringBuilder text = new();
         string message;
         bool messageIsError;
@@ -58,8 +62,10 @@ namespace Beast.Gameplay
             {
                 inventory = player.GetComponent<Inventory>();
                 equipment = player.GetComponent<PlayerEquipment>();
+                condition = player.GetComponent<GearCondition>();
             }
             state = Services.Get<GameStateService>();
+            if (Services.TryGet(out GameDatabase database)) database.TryGet("item_ironscrap", out scrap);
         }
 
         void OnOpened(WorkbenchOpenedEvent evt)
@@ -126,15 +132,20 @@ namespace Beast.Gameplay
             foreach (var recipe in bench.Recipes.Recipes)
                 if (recipe != null && recipe.Output != null && recipe.Kind == kind) shown.Add(recipe);
 
+            worn.Clear();
+            if (kind == CraftKind.Smithing && condition != null && scrap != null) worn.AddRange(condition.WornItems());
+            float repairHeight = worn.Count > 0 ? 40f + worn.Count * (RepairRowHeight + 8f) + 18f : 0f;
+
             var view = area;
-            var content = new Rect(0f, 0f, view.width - 18f, Mathf.Max(1, shown.Count) * (RowHeight + 10f));
+            var content = new Rect(0f, 0f, view.width - 18f, repairHeight + Mathf.Max(1, shown.Count) * (RowHeight + 10f));
             scroll = UITheme.BeginScroll(view, scroll, content);
-            if (shown.Count == 0) GUI.Label(new Rect(4f, 4f, content.width - 8f, 48f), "No recipes of this kind yet.", UITheme.PaperMuted);
+            if (worn.Count > 0) DrawRepairs(content.width);
+            if (shown.Count == 0) GUI.Label(new Rect(4f, repairHeight + 4f, content.width - 8f, 48f), "No recipes of this kind yet.", UITheme.PaperMuted);
 
             for (int i = 0; i < shown.Count; i++)
             {
                 var recipe = shown[i];
-                var row = new Rect(0f, i * (RowHeight + 10f), content.width, RowHeight);
+                var row = new Rect(0f, repairHeight + i * (RowHeight + 10f), content.width, RowHeight);
                 string problem = Crafting.Problem(recipe, inventory, equipment, bench.Storage);
 
                 UITheme.PaperSlot(row, false, row.Contains(Event.current.mousePosition));
@@ -151,6 +162,32 @@ namespace Beast.Gameplay
                 if (batch && UITheme.BrushButton(new Rect(row.xMax - 78f, row.y + 28f, 66f, 48f), "×5", can)) Make(recipe, 5);
             }
             UITheme.EndScroll(ref scroll, view);
+        }
+
+        const float RepairRowHeight = 74f;
+
+        /// <summary>Mend: each worn item you own, its condition, and the Iron Scrap it takes to make it as good as new.</summary>
+        void DrawRepairs(float width)
+        {
+            GUI.Label(new Rect(4f, 4f, width - 8f, 30f), UITheme.Spaced("Mend"), rowName);
+            int have = inventory.CountOf(scrap) + (bench.Storage != null ? bench.Storage.CountOf(scrap) : 0);
+            for (int i = 0; i < worn.Count; i++)
+            {
+                var gear = worn[i];
+                var row = new Rect(0f, 40f + i * (RepairRowHeight + 8f), width, RepairRowHeight);
+                UITheme.PaperSlot(row, false, row.Contains(Event.current.mousePosition));
+                UITheme.ItemIcon(new Rect(row.x + 14f, row.y + 11f, 52f, 52f), gear);
+                int needed = condition.RepairScrap(gear);
+                string color = have >= needed ? UITheme.InkGoldDarkHex : UITheme.VermilionHex;
+                GUI.Label(new Rect(row.x + 80f, row.y + 6f, row.width - 300f, 30f), $"{gear.DisplayName}  <color={UITheme.MutedOnPaperHex}>· {condition.ConditionText(gear)}</color>", rowName);
+                GUI.Label(new Rect(row.x + 80f, row.y + 38f, row.width - 300f, 26f),
+                    $"<color={color}>{Mathf.Min(have, needed)}/{needed}</color> {scrap.DisplayName}", rowDetail);
+                if (UITheme.BrushButton(new Rect(row.xMax - 140f, row.y + 13f, 128f, 48f), "Mend", have >= needed))
+                {
+                    if (condition.RepairWithScrap(gear, scrap, bench.Storage)) Show($"Mended {gear.DisplayName}.", false);
+                    else Show($"Not enough {scrap.DisplayName}.", true);
+                }
+            }
         }
 
         /// <summary>"2/2 Healroot · <red>0/1 Turnip</red>"; worn gear is marked "(worn)".</summary>

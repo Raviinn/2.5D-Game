@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9725793c74b2af64f976e3019de7adbe, type: 3}
+  m_Name: Contract_PumpkinOrder
+  m_EditorClassIdentifier: 
+  id: contract_pumpkinorder
+  Title: Pumpkin Order
+  Summary: Oswin's buyer from the river towns wants pumpkins. Autumn only, obviously.
+  Type: 2
+  TurnInAt: the Contracts Board
+  Prerequisites: []
+  RequiredTier: 0
+  Objectives:
+  - Type: 1
+    Description: 
+    Enemy: {fileID: 0}
+    Item: {fileID: 11400000, guid: 9555a6bf2eeb3914b9bc4822ffeb90d0, type: 2}
+    Crop: {fileID: 0}
+    Count: 3
+  TakeItemsOnTurnIn: 1
+  AutoComplete: 0
+  GoldReward: 90
+  ItemRewards: []
+  CombatXp: 0
+  FarmingXp: 25
+  StandingReward: 8

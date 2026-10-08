@@ -35,10 +35,15 @@ namespace Beast.Core
         [Tooltip("Wind, birds, crickets, rain.")] public float ambienceVolume = 0.8f;
         [Tooltip("Menu clicks and quest / level-up chimes.")] public float interfaceVolume = 0.8f;
 
+        [Header("Key bindings (Milestone 50)")]
+        [Tooltip("Rebound keys and buttons, as Input System override JSON. Empty = the defaults.")]
+        public string bindingOverrides = string.Empty;
+
         [Header("Interface")]
         public float uiScale = 1f;
         public bool damageNumbers = true;
         [Tooltip("0 = no camera shake, 1 = full.")] public float cameraShake = 1f;
+        [Tooltip("The first-day guide and one-off tips (Milestone 53).")] public bool tutorialHints = true;
 
         public GameSettings Clone() => (GameSettings)MemberwiseClone();
 
@@ -136,6 +141,7 @@ namespace Beast.Core
             Application.targetFrameRate = !Current.vSync && Current.frameCap > 0 ? Current.frameCap : -1;
             ApplyGraphics();
             AudioListener.volume = Current.masterVolume;
+            if (Services.TryGet(out InputService input)) input.ApplyBindingOverrides(Current.bindingOverrides);
 
             saveAt = Time.unscaledTime + SaveDelay;
             EventBus<SettingsChangedEvent>.Raise(new SettingsChangedEvent(Current));

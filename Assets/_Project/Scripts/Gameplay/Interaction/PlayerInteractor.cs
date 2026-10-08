@@ -23,6 +23,8 @@ namespace Beast.Gameplay
 
         public Inventory Inventory { get; private set; }
         public Interactable Focus { get; private set; }
+        /// <summary>Set while something else owns the Interact key (fishing): nothing is focused or used.</summary>
+        public bool Busy { get; set; }
         public InteractionPrompt FocusPrompt { get; private set; }
 
         void Awake()
@@ -42,7 +44,7 @@ namespace Beast.Gameplay
         void Update()
         {
             // Only during gameplay, and not mid-attack, mid-dodge, staggered or dead.
-            if (gameState.Current != GameState.Playing || (combat != null && !combat.CanUseItems))
+            if (Busy || gameState.Current != GameState.Playing || (combat != null && !combat.CanUseItems))
             {
                 SetFocus(null, default);
                 holdIsValid = false;

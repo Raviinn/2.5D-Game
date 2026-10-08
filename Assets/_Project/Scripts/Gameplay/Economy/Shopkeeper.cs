@@ -101,13 +101,21 @@ namespace Beast.Gameplay
             item != null && item.Category != ItemCategory.Quest && Array.IndexOf(shop.Buys, item.Category) >= 0;
 
         /// <summary>What the player pays for one unit.</summary>
-        public int BuyPrice(ItemData item) => Mathf.Max(1, Mathf.CeilToInt(item.BaseValue * shop.SellMarkup * PriceModifier));
+        public int BuyPrice(ItemData item) => Mathf.Max(1, Mathf.CeilToInt(item.BaseValue * shop.SellMarkup * PriceModifier * FestivalBuyFactor(item)));
+
+        /// <summary>Planting Festival (Milestone 46): seeds at half price.</summary>
+        static float FestivalBuyFactor(ItemData item) =>
+            item != null && item.Category == ItemCategory.Seed && Calendar.FestivalToday == Festival.PlantingFestival ? 0.5f : 1f;
+
+        /// <summary>Harvest Fair (Milestone 46): crops fetch half as much again.</summary>
+        static float FestivalSellFactor(ItemData item) =>
+            item != null && item.Category == ItemCategory.Crop && Calendar.FestivalToday == Festival.HarvestFair ? 1.5f : 1f;
 
         /// <summary>What the player receives for one unit right now (drops as this market saturates).</summary>
         public int SellPrice(ItemData item)
         {
             if (item.BaseValue <= 0) return 0;
-            return Mathf.Max(1, Mathf.FloorToInt(item.BaseValue * shop.BuyRate * Demand(item) / PriceModifier));
+            return Mathf.Max(1, Mathf.FloorToInt(item.BaseValue * shop.BuyRate * Demand(item) * FestivalSellFactor(item) / PriceModifier));
         }
 
         /// <summary>1 = normal demand; lower once the player has sold a lot of this item here.</summary>

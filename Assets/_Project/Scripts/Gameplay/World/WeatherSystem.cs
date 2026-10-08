@@ -55,6 +55,8 @@ namespace Beast.Gameplay
         /// <summary>0..1, blends over a few seconds.</summary>
         public float RainAmount => rainAmount;
         public bool IsRaining => current == Weather.Rain;
+        /// <summary>In winter, rain falls as snow (slow, drifting flakes).</summary>
+        public bool IsSnow => Calendar.Current == Season.Winter;
 
         void Awake()
         {
@@ -92,7 +94,9 @@ namespace Beast.Gameplay
             if (day <= 1) return Weather.Clear;
             var random = new System.Random(unchecked(seed * 7919 + day * 104729));
             double roll = random.NextDouble();
-            return roll < rainChance ? Weather.Rain : roll < rainChance + cloudyChance ? Weather.Cloudy : Weather.Clear;
+            // Seasons (Milestone 46): dry summers, wet autumns, snowy winters.
+            float wet = rainChance * Calendar.SeasonOf(day) switch { Season.Summer => 0.5f, Season.Autumn => 1.4f, Season.Winter => 1.5f, _ => 1f };
+            return roll < wet ? Weather.Rain : roll < wet + cloudyChance ? Weather.Cloudy : Weather.Clear;
         }
 
         /// <summary>Changes the weather now (new day, debug key, tests).</summary>
@@ -104,7 +108,9 @@ namespace Beast.Gameplay
             if (previous == weather && announce) return;
             EventBus<WeatherChangedEvent>.Raise(new WeatherChangedEvent(previous, weather));
             if (announce && weather == Weather.Rain && previous != Weather.Rain)
-                EventBus<HudMessageEvent>.Raise(new HudMessageEvent("It's raining: the field is watered today."));
+                EventBus<HudMessageEvent>.Raise(new HudMessageEvent(IsSnow
+                    ? "It's snowing: the field is watered today."
+                    : "It's raining: the field is watered today."));
         }
 
         void Update()
@@ -179,10 +185,32 @@ namespace Beast.Gameplay
             if (cameraTransform == null && Camera.main != null) cameraTransform = Camera.main.transform;
             if (cameraTransform != null) rain.transform.position = cameraTransform.position + Vector3.up * 13f;
 
+            StyleFall(IsSnow);
             var emission = rain.emission;
-            emission.rateOverTime = maxRaindrops / 1.1f * rainAmount;
+            emission.rateOverTime = (snowStyle ? maxRaindrops * 0.12f : maxRaindrops / 1.1f) * rainAmount;
             if (rainAmount > 0.01f && !rain.isPlaying && rainMaterial != null) rain.Play();
             else if (rainAmount <= 0.01f && rain.isPlaying) rain.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        }
+
+        bool snowStyle;
+
+        /// <summary>Rain streaks, or (in winter) big slow snowflakes drifting down.</summary>
+        void StyleFall(bool snow)
+        {
+            if (snow == snowStyle) return;
+            snowStyle = snow;
+            var main = rain.main;
+            main.startLifetime = snow ? 6f : 1.1f;
+            main.startSpeed = snow ? 2.4f : 18f;
+            main.startSize = snow ? 0.09f : 0.035f;
+            main.startColor = snow ? new Color(0.96f, 0.97f, 1f, 0.85f) : new Color(0.78f, 0.84f, 0.95f, 0.32f);
+            var velocity = rain.velocityOverLifetime;
+            // All three axes must use the same curve mode (two constants here), or Unity logs an error every frame.
+            velocity.x = new ParticleSystem.MinMaxCurve(snow ? -0.6f : 1.6f, snow ? 0.9f : 1.6f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.z = new ParticleSystem.MinMaxCurve(snow ? -0.4f : 0.4f, snow ? 0.6f : 0.4f);
+            var renderer = rain.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = snow ? ParticleSystemRenderMode.Billboard : ParticleSystemRenderMode.Stretch;
         }
 
         // ---------- Save ----------

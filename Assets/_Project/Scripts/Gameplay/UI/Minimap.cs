@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using Beast.Core;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering.Universal;
 
@@ -10,6 +12,8 @@ namespace Beast.Gameplay
     /// (characters excluded) into a small texture; markers are drawn on top: player arrow, enemies,
     /// NPCs with quest markers, the contracts board, the bed, north, and the tracked quest's target
     /// (pinned to the edge when it's off the map). The map rotates with the camera, like Genshin's.
+    /// A trail of gold dots leads along the walkable route (the enemies' navigation mesh) to the tracked target,
+    /// drifting toward it, on both the minimap and the large map (Milestone 38).
     /// </summary>
     public sealed class Minimap : MonoBehaviour, IGameMenuTab
     {
@@ -30,6 +34,11 @@ namespace Beast.Gameplay
         Transform mainCamera;
         QuestTracker tracker;
         GameStateService state;
+        WorldNavigation navigation;
+        NavMeshPath trailPath;
+        readonly List<Vector3> trail = new();
+        Vector3 trailTarget;
+        float nextTrailTime;
         bool large; // true while the Map tab is showing
         Rect mapRect;
 
@@ -97,6 +106,79 @@ namespace Beast.Gameplay
             mapCamera.orthographicSize = (large ? largeWorldSize : smallWorldSize) * 0.5f;
             float yaw = mainCamera != null ? mainCamera.eulerAngles.y : 0f;
             mapCamera.transform.SetPositionAndRotation(player.position + Vector3.up * EffectiveHeight, Quaternion.Euler(90f, yaw, 0f));
+            UpdateTrail();
+        }
+
+        // ---------- Trail to the tracked target ----------
+
+        /// <summary>The route the trail follows (world points, the player first); empty when there's no target or route.</summary>
+        public IReadOnlyList<Vector3> Trail => trail;
+
+        /// <summary>Re-plans the route a couple of times a second, or at once when the target moves.</summary>
+        void UpdateTrail()
+        {
+            if (tracker == null || !tracker.HasTarget)
+            {
+                trail.Clear();
+                return;
+            }
+            bool targetMoved = (tracker.TargetPosition - trailTarget).sqrMagnitude > 1f;
+            if (!targetMoved && Time.unscaledTime < nextTrailTime) return;
+            nextTrailTime = Time.unscaledTime + 0.4f;
+            trailTarget = tracker.TargetPosition;
+
+            trail.Clear();
+            if (navigation == null && !Services.TryGet(out navigation)) return;
+            if (!navigation.IsReady) return;
+            trailPath ??= new NavMeshPath();
+            // Hanging or climbing: start from the closest walkable ground below.
+            Vector3 from = player.position;
+            if (!navigation.TrySnap(from, out _) && NavMesh.SamplePosition(from, out var below, 4f, NavMesh.AllAreas)) from = below.position;
+            if (!navigation.TryGetPath(from, trailTarget, trailPath, out _)) return;
+            trail.AddRange(trailPath.corners);
+        }
+
+        /// <summary>Gold dots every few pixels along the route, drifting toward the target; clipped to the map.</summary>
+        void DrawTrail()
+        {
+            if (trail.Count < 2) return;
+            float spacing = large ? 14f : 10f;
+            float dot = large ? 7f : 5f;
+            float phase = Time.unscaledTime * spacing * 1.2f % spacing;
+            var inner = new Rect(mapRect.x + 4f, mapRect.y + 4f, mapRect.width - 8f, mapRect.height - 8f);
+            var center = mapRect.center;
+            var end = MapPoint(trail[^1]);
+
+            // The route starts where the player stands now (the path is a fraction of a second old).
+            Vector2 previous = MapPoint(player.position);
+            float carried = spacing - phase; // distance until the next dot
+            for (int i = 1; i < trail.Count; i++)
+            {
+                Vector2 next = MapPoint(trail[i]);
+                Vector2 step = next - previous;
+                float length = step.magnitude;
+                float travelled = carried;
+                while (travelled <= length)
+                {
+                    Vector2 point = previous + step * (travelled / Mathf.Max(length, 0.0001f));
+                    // Not under the player's arrow or the target's diamond, and only inside the map.
+                    if (inner.Contains(point) && (point - center).sqrMagnitude > 12f * 12f && (point - end).sqrMagnitude > 10f * 10f)
+                    {
+                        UITheme.DrawIcon(new Rect(point.x - dot * 0.5f + 1f, point.y - dot * 0.5f + 1f, dot, dot), UITheme.CircleIcon, new Color(0f, 0f, 0f, 0.55f));
+                        UITheme.DrawIcon(new Rect(point.x - dot * 0.5f, point.y - dot * 0.5f, dot, dot), UITheme.CircleIcon, UITheme.Gold);
+                    }
+                    travelled += spacing;
+                }
+                carried = travelled - length;
+                previous = next;
+            }
+        }
+
+        /// <summary>Where a world position falls on the map, in GUI units (may be outside the map).</summary>
+        Vector2 MapPoint(Vector3 world)
+        {
+            Vector3 viewport = mapCamera.WorldToViewportPoint(world);
+            return new Vector2(mapRect.x + viewport.x * mapRect.width, mapRect.y + (1f - viewport.y) * mapRect.height);
         }
 
         /// <summary>
@@ -174,6 +256,8 @@ namespace Beast.Gameplay
 
         void DrawMarkers()
         {
+            DrawTrail();
+
             // North
             Marker(player.position + Vector3.forward * 1000f, null, "N", Color.white, 18f, clampToEdge: true);
 

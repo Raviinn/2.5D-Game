@@ -93,6 +93,23 @@ namespace Beast.Core
 
             EventBus<GameStateChangedEvent>.Subscribe(OnGameStateChanged);
             ApplyState(GameState.Boot);
+            if (Services.TryGet(out SettingsService settings)) ApplyBindingOverrides(settings.Current.bindingOverrides);
+        }
+
+        /// <summary>Rebound keys (Milestone 50): replaces any overrides with these (empty = the defaults).</summary>
+        public void ApplyBindingOverrides(string json)
+        {
+            if (actions == null) return;
+            actions.RemoveAllBindingOverrides();
+            if (string.IsNullOrEmpty(json)) return;
+            try
+            {
+                actions.LoadBindingOverridesFromJson(json);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[Input] Couldn't apply saved key bindings ({e.Message}); using the defaults.");
+            }
         }
 
         void OnDestroy()

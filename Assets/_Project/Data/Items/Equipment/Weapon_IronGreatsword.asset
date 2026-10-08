@@ -28,4 +28,5 @@ MonoBehaviour:
   - Stat: 5
     Flat: 10
     Percent: 0
+  Durability: 240
   Moveset: {fileID: 11400000, guid: f7b613924de878c4ea05f9cd89d62248, type: 2}

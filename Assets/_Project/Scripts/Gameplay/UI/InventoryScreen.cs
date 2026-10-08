@@ -235,10 +235,13 @@ namespace Beast.Gameplay
             return $"Restores {(health != null && stamina != null ? $"{health} and {stamina}" : health ?? stamina)}.";
         }
 
-        static string Effects(EquipmentData gear)
+        string Effects(EquipmentData gear)
         {
             string text = CharacterScreen.Describe(gear.Modifiers);
-            return string.IsNullOrEmpty(text) ? $"<color={UITheme.MutedOnInkHex}>No stat bonuses</color>" : $"<color={UITheme.GoodOnInkHex}>{text}</color>";
+            string effects = string.IsNullOrEmpty(text) ? $"<color={UITheme.MutedOnInkHex}>No stat bonuses</color>" : $"<color={UITheme.GoodOnInkHex}>{text}</color>";
+            var condition = equipment != null ? equipment.GetComponent<GearCondition>() : null;
+            string wear = condition != null ? condition.ConditionText(gear) : string.Empty;
+            return wear.Length > 0 ? $"{effects}   {wear}" : effects;
         }
 
         void UsePrimary(ItemData item)

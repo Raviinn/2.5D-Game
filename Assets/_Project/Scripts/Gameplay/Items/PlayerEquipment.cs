@@ -25,6 +25,7 @@ namespace Beast.Gameplay
         int activeWeapon;
         Inventory inventory;
         PlayerStats stats;
+        GearCondition condition;
 
         [Serializable]
         sealed class State
@@ -174,13 +175,15 @@ namespace Beast.Gameplay
 
         public void CollectModifiers(List<StatModifier> into)
         {
+            if (condition == null) TryGetComponent(out condition);
             AddModifiers(ActiveWeapon, into);
             foreach (var item in armor.Values) AddModifiers(item, into);
         }
 
-        static void AddModifiers(EquipmentData item, List<StatModifier> into)
+        void AddModifiers(EquipmentData item, List<StatModifier> into)
         {
-            if (item != null && item.Modifiers != null) into.AddRange(item.Modifiers);
+            // Broken gear (Milestone 44) gives nothing until it's repaired.
+            if (item != null && item.Modifiers != null && (condition == null || !condition.IsBroken(item))) into.AddRange(item.Modifiers);
         }
 
         void NotifyChanged()

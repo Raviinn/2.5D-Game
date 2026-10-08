@@ -46,6 +46,12 @@ namespace Beast.Gameplay
                 Release();
         }
 
+        /// <summary>Locks onto a particular target (tests, scripted moments).</summary>
+        public void LockOnto(Combatant target)
+        {
+            if (target != null && !target.IsDead) SetTarget(target);
+        }
+
         public void Release()
         {
             if (Target != null) SetTarget(null);

@@ -47,6 +47,29 @@ namespace Beast.Gameplay
         public float ArrowDamage = 14f;
         public float ArrowPoiseDamage = 12f;
 
+        [Header("Shield (shieldbearers)")]
+        [Tooltip("Raises a shield while closing in: hits from the front are blocked until its guard runs out.")]
+        public bool Shield;
+        [Tooltip("Guard points; blocked damage × GuardCostPerDamage is taken off. At zero the guard breaks (staggered).")]
+        public float GuardMax = 60f;
+        public float GuardCostPerDamage = 1.4f;
+        [Tooltip("Guard regained per second, after a short pause.")]
+        public float GuardRegen = 16f;
+        [Range(0f, 1f)] public float GuardDamageReduction = 0.9f;
+        public float GuardBreakStagger = 1.8f;
+        [Tooltip("Move speed while the shield is up (share of MoveSpeed).")]
+        [Range(0.2f, 1f)] public float GuardMoveShare = 0.6f;
+
+        [Header("Pack (wolves)")]
+        [Tooltip("Waits for its turn behind or beside you instead of in front: packs flank.")]
+        public bool PackHunter;
+        [Tooltip("Seconds spent darting away after each attack (0 = none).")]
+        public float RetreatAfterAttack;
+
+        [Header("Brutes")]
+        [Tooltip("Can't be staggered or knocked back while attacking.")]
+        public bool SuperArmor;
+
         [Header("Night (bolder after dark)")]
         [Tooltip("Extra damage at night (0.3 = +30%).")]
         public float NightDamageBonus = 0.3f;
@@ -66,6 +89,10 @@ namespace Beast.Gameplay
         [Min(0)] public int StandingReward;
         [Tooltip("Rolled on death by the LootDropper component.")]
         public LootTable Loot;
+
+        [Header("HUD")]
+        [Tooltip("Height of the name plate above the feet (m): lower for wolves, higher for brutes.")]
+        public float PlateHeight = 2.2f;
 
         [Header("Testing")]
         [Tooltip("Seconds until respawn after death. 0 = stay dead.")]

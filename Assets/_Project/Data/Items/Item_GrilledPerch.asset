@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76d2165155e1585469c664879a01dfe7, type: 3}
+  m_Name: Item_GrilledPerch
+  m_EditorClassIdentifier: 
+  id: item_grilledperch
+  DisplayName: Grilled Perch
+  Description: Charred skin, flaky inside.
+  Category: 1
+  Icon: {fileID: 21300000, guid: f8ea19f33c9b7644e95517be9fb2f083, type: 3}
+  PlaceholderColor: {r: 0.76862746, g: 0.5882353, b: 0.3529412, a: 1}
+  MaxStack: 20
+  BaseValue: 30
+  Heal: 40
+  Stamina: 20
+  Buff:
+    Stat: 0
+    Flat: 0
+    Percent: 0
+  BuffSeconds: 0

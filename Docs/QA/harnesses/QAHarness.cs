@@ -710,7 +710,8 @@ public sealed class QAHarness : MonoBehaviour
         int kills = 0;
         foreach (var e in EnemyController.Active.ToArray())
         {
-            if (e.Data.IsTrainingDummy || kills >= 3 || e.Combatant.IsDead) continue;
+            // Only the enemy the quest asks for (wolves, archers and the shieldbearer don't count).
+            if (e.Data.IsTrainingDummy || kills >= 3 || e.Combatant.IsDead || e.Data != bandits.Objectives[0].Enemy) continue;
             e.Combatant.ReceiveHit(new DamageInfo { Damage = 99999f, Attacker = me });
             kills++;
         }

@@ -10,12 +10,16 @@ namespace Beast.EditorTools
     /// <summary>
     /// Milestone 27 setup (storage): a 60-slot storage chest beside the homestead bed, linked to the workbench so
     /// crafting can use what's inside. Safe to re-run: an existing chest (and its contents in saves) is kept.
+    /// Milestone 37: the chest is never placed on the farm field; a chest already standing on it is moved off.
     /// </summary>
     public static class StorageSetup
     {
         const string TestWorldScenePath = "Assets/_Project/Scenes/World_Test.unity";
         const string ChestName = "Storage_Chest";
         public const int ChestSlots = 60;
+
+        [MenuItem("Beast/Setup/Run Milestone 37 Setup (Chest Off the Field)", priority = 33)]
+        public static void RunMilestone37() => Run();
 
         [MenuItem("Beast/Setup/Run Milestone 27 Setup (Storage Chest)", priority = 23)]
         public static void Run()
@@ -33,7 +37,19 @@ namespace Beast.EditorTools
 
             string report;
             var chest = GameObject.Find(ChestName);
-            if (chest != null)
+            var homeBed = Object.FindFirstObjectByType<SleepSpot>();
+            if (chest != null && (OnField(chest.transform.position) || OffTheFloor(chest.transform, homeBed) || FarFromBed(chest.transform, homeBed)))
+            {
+                var bed = homeBed;
+                // Out of the way while searching, so the chest's own collider doesn't block its new spot.
+                chest.SetActive(false);
+                var spot = bed != null ? FindSpot(bed.transform) : chest.transform.position;
+                chest.SetActive(true);
+                chest.transform.position = spot;
+                if (bed != null) FaceAwayFrom(chest.transform, bed.transform);
+                report = $"chest moved to the floor beside the bed, off the farm field, at {spot:F1}";
+            }
+            else if (chest != null)
             {
                 report = "chest kept";
             }
@@ -80,6 +96,8 @@ namespace Beast.EditorTools
         static Vector3 FindSpot(Transform bed)
         {
             Physics.SyncTransforms();
+            // The floor the bed stands on: a spot must be on the same floor, never on top of the workbench or a crate.
+            float floor = bed.TryGetComponent(out Collider bedCollider) ? bedCollider.bounds.min.y : bed.position.y;
             var directions = new[] { -bed.right, bed.right, -bed.forward, bed.forward };
             foreach (float distance in new[] { 2f, 2.8f, 3.6f, 4.5f })
                 foreach (var direction in directions)
@@ -88,10 +106,47 @@ namespace Beast.EditorTools
                     var spot = bed.position + flat * distance;
                     var from = new Vector3(spot.x, bed.position.y + 1.5f, spot.z);
                     if (!Physics.Raycast(from, Vector3.down, out var ground, 4f, ~0, QueryTriggerInteraction.Ignore)) continue;
-                    if (Physics.CheckBox(ground.point + Vector3.up * 0.5f, new Vector3(0.9f, 0.4f, 0.7f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore)) continue;
+                    if (Mathf.Abs(ground.point.y - floor) > 0.3f || OnField(ground.point)) continue;
+                    if (Physics.CheckBox(ground.point + Vector3.up * 0.45f, new Vector3(0.75f, 0.4f, 0.6f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore)) continue;
                     return ground.point;
                 }
-            return bed.position - bed.right * 2f;
+            return bed.position + bed.forward * 2.2f;
+        }
+
+        /// <summary>True when a chest at this point would stand on the farm field or its fence (with room to walk).</summary>
+        public static bool OnField(Vector3 point)
+        {
+            var plot = Object.FindFirstObjectByType<FarmPlot>();
+            if (plot == null) return false;
+            var so = new SerializedObject(plot);
+            float tile = so.FindProperty("tileSize").floatValue;
+            var min = plot.transform.position;
+            var max = min + new Vector3(so.FindProperty("width").intValue * tile, 0f, so.FindProperty("depth").intValue * tile);
+            const float margin = 1.3f; // fence (0.6 m out) + half the chest + a step
+            return point.x > min.x - margin && point.x < max.x + margin && point.z > min.z - margin && point.z < max.z + margin;
+        }
+
+        /// <summary>True when the chest isn't standing on the bed's floor (e.g. on top of the workbench).</summary>
+        static bool OffTheFloor(Transform chest, SleepSpot bed)
+        {
+            if (bed == null) return false;
+            float floor = bed.TryGetComponent(out Collider bedCollider) ? bedCollider.bounds.min.y : bed.transform.position.y;
+            return Mathf.Abs(chest.position.y - floor) > 0.3f;
+        }
+
+        static bool FarFromBed(Transform chest, SleepSpot bed)
+        {
+            if (bed == null) return false;
+            var offset = chest.position - bed.transform.position;
+            offset.y = 0f;
+            return offset.magnitude > 3.5f;
+        }
+
+        static void FaceAwayFrom(Transform chest, Transform bed)
+        {
+            var toBed = bed.position - chest.position;
+            toBed.y = 0f;
+            if (toBed.sqrMagnitude > 0.01f) chest.rotation = Quaternion.LookRotation(-toBed); // lid hinge away from the bed
         }
 
         static GameObject BuildChest(Vector3 groundPoint, Transform bed, Material wood, Material iron)

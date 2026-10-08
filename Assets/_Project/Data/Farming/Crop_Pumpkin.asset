@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 261b11f7f635176469e175bd65eac5bb, type: 3}
+  m_Name: Crop_Pumpkin
+  m_EditorClassIdentifier: 
+  id: crop_pumpkin
+  DisplayName: Pumpkin
+  Seed: {fileID: 11400000, guid: 387f87c57962d3e448c0e6cf11ab9ac2, type: 2}
+  Produce: {fileID: 11400000, guid: 9555a6bf2eeb3914b9bc4822ffeb90d0, type: 2}
+  ProduceMin: 1
+  ProduceMax: 2
+  HarvestXp: 14
+  DaysPerStage: 02000000020000000200000002000000
+  RegrowDays: 0
+  Seasons: 02000000
+  WiltAfterDryDays: 2
+  DieAfterDryDays: 3
+  Sheet: {fileID: 2800000, guid: 2928b371cacea564fbc1617a5c8c6fc8, type: 3}
+  FrameSize: 32
+  PixelsPerUnit: 40

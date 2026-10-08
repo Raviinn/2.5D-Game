@@ -69,12 +69,14 @@ namespace Beast.Core
 
         void OnResumePressed(InputAction.CallbackContext _)
         {
+            if (KeyBindings.Busy) return; // Esc / Start cancels the rebind, not the menu
             if (HoldPause && Current is GameState.Paused or GameState.InGameMenu) return;
             if (Current is GameState.Paused or GameState.InGameMenu) SetState(GameState.Playing);
         }
 
         void OnCloseMenuPressed(InputAction.CallbackContext _)
         {
+            if (KeyBindings.Busy) return;
             if (Current == GameState.InGameMenu && !BlockHotkeyClose) SetState(GameState.Playing);
         }
     }

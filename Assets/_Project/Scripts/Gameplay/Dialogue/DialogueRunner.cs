@@ -30,6 +30,7 @@ namespace Beast.Gameplay
         PlayerProgression progression;
         Reputation reputation;
         PlayerAppearance playerAppearance;
+        GearCondition gear;
         DialogueSpeaker currentSpeaker;
         Shopkeeper pendingShop;
         readonly List<string> choices = new();
@@ -41,6 +42,8 @@ namespace Beast.Gameplay
         /// <summary>Null for narration.</summary>
         public string CurrentSpeakerName { get; private set; }
         public SpeakerData CurrentSpeakerData { get; private set; }
+        /// <summary>The NPC being talked to (the dialogue camera frames them); null for a conversation without one.</summary>
+        public Transform ConversationPartner => currentSpeaker != null ? currentSpeaker.transform : null;
         public IReadOnlyList<string> Choices => choices;
         /// <summary>Changes whenever a new line is shown (the UI restarts its typewriter effect).</summary>
         public int LineId { get; private set; }
@@ -94,6 +97,7 @@ namespace Beast.Gameplay
                 progression = player.GetComponent<PlayerProgression>();
                 reputation = player.GetComponent<Reputation>();
                 playerAppearance = player.GetComponent<PlayerAppearance>();
+                gear = player.GetComponent<GearCondition>();
             }
         }
 
@@ -109,6 +113,7 @@ namespace Beast.Gameplay
             state.SetState(GameState.InGameMenu);
             IsActive = true;
             state.BlockHotkeyClose = true; // only Esc abandons a conversation
+            FaceEachOther(speaker);
             try
             {
                 story.ChoosePathString(knot);
@@ -121,6 +126,19 @@ namespace Beast.Gameplay
             }
             Advance();
             return true;
+        }
+
+        /// <summary>The player and the NPC turn to each other at once (the game is paused, so they can't turn slowly).</summary>
+        static void FaceEachOther(DialogueSpeaker speaker)
+        {
+            var player = GameObject.FindWithTag("Player");
+            if (speaker == null || player == null) return;
+            Vector3 between = speaker.transform.position - player.transform.position;
+            between.y = 0f;
+            if (between.sqrMagnitude < 0.0001f) return;
+            if (player.TryGetComponent(out PlayerMotor motor)) motor.SnapRotation(between);
+            else player.transform.rotation = Quaternion.LookRotation(between);
+            if (speaker.TryGetComponent(out NpcController npc)) npc.FaceNow(-between);
         }
 
         /// <summary>Shows the next line, or ends the conversation. Ignored while choices are showing.</summary>
@@ -236,6 +254,37 @@ namespace Beast.Gameplay
             {
                 if (inventory != null) inventory.AddGold(amount);
             });
+            story.BindExternalFunction("heal_player", () =>
+            {
+                var player = inventory != null ? inventory.gameObject : GameObject.FindWithTag("Player");
+                if (player == null) return;
+                if (player.TryGetComponent(out Combatant combatant)) combatant.Heal(combatant.MaxHealth);
+                if (player.TryGetComponent(out Stamina stamina)) stamina.Refill();
+            });
+            story.BindExternalFunction("is_night", () => (object)(Services.TryGet(out DayNightCycle cycle) && cycle.IsNight), true);
+            story.BindExternalFunction("weather", () => (object)(Services.TryGet(out WeatherSystem w) ? w.Current.ToString() : "Clear"), true);
+            story.BindExternalFunction("hurt", () =>
+            {
+                var c = inventory != null ? inventory.GetComponent<Combatant>() : null;
+                return (object)(c != null && c.MaxHealth > 0f && c.Health < c.MaxHealth * 0.5f);
+            }, true);
+            story.BindExternalFunction("wears", (string id) =>
+            {
+                var equipment = inventory != null ? inventory.GetComponent<PlayerEquipment>() : null;
+                return (object)(equipment != null && Item(id) is EquipmentData gear && equipment.EquippedCount(gear) > 0);
+            }, true);
+            story.BindExternalFunction("broken_gear", () =>
+            {
+                var equipment = inventory != null ? inventory.GetComponent<PlayerEquipment>() : null;
+                if (equipment == null || gear == null) return (object)false;
+                if (gear.IsBroken(equipment.WeaponAt(0)) || gear.IsBroken(equipment.WeaponAt(1))) return (object)true;
+                foreach (var slot in PlayerEquipment.ArmorSlotOrder) if (gear.IsBroken(equipment.ArmorAt(slot))) return (object)true;
+                return (object)false;
+            }, true);
+            story.BindExternalFunction("season", () => (object)Calendar.Current.ToString(), true);
+            story.BindExternalFunction("festival", () => (object)Calendar.FestivalName(Calendar.FestivalToday), true);
+            story.BindExternalFunction("repair_cost", () => (object)(gear != null ? gear.TotalRepairPrice() : 0), true);
+            story.BindExternalFunction("repair_gear", () => (object)(gear != null && gear.RepairAllForGold()));
             story.BindExternalFunction("change_standing", (int amount) =>
             {
                 if (reputation != null) reputation.Change(amount, StandingSource.Dialogue);

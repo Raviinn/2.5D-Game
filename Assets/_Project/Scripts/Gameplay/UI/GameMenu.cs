@@ -147,6 +147,7 @@ namespace Beast.Gameplay
             if (state.Current == GameState.InGameMenu) state.BlockHotkeyClose = true;
             state.HoldPause = Current != null && Current.HasSubView; // Esc backs out of the sub-view first
             if (Time.frameCount == openedFrame) return; // the key that opened the menu mustn't also act inside it
+            if (KeyBindings.Busy) return; // keys pressed to rebind (Settings → Controls) aren't menu shortcuts
 
             var keyboard = Keyboard.current;
             var pad = Gamepad.current;

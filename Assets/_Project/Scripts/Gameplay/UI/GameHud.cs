@@ -346,7 +346,7 @@ namespace Beast.Gameplay
             float width = MinimapSize;
             var rect = new Rect(UITheme.Width - width - MinimapMargin, ClockTop, width, 30f);
             UITheme.HudPanel(rect);
-            GUI.Label(new Rect(rect.x + 10f, rect.y, 110f, rect.height), $"<b>Day {clock.Day}</b>   {clock.Hour:00}:{clock.Minute:00}", UITheme.Small);
+            GUI.Label(new Rect(rect.x + 10f, rect.y, 110f, rect.height), $"<b>{Calendar.ShortName(Calendar.SeasonOf(clock.Day))} {Calendar.DayOfSeason(clock.Day)}</b>   {clock.Hour:00}:{clock.Minute:00}", UITheme.Small);
             DrawSkyIcon(new Rect(rect.x + 120f, rect.y + 6f, 18f, 18f));
             if (inventory != null)
             {
@@ -423,7 +423,7 @@ namespace Beast.Gameplay
             float alpha = age < SleepHold ? 1f : 1f - (age - SleepHold) / SleepFade;
             UITheme.Fill(new Rect(0f, 0f, UITheme.Width, UITheme.Height), new Color(0f, 0f, 0f, alpha));
             var color = new Color(UITheme.Text.r, UITheme.Text.g, UITheme.Text.b, alpha);
-            UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.42f, UITheme.Width, 60f), UITheme.Spaced($"Day {sleepDay}"), UITheme.Huge, color);
+            UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.42f, UITheme.Width, 60f), UITheme.Spaced(Calendar.DateText(sleepDay)), UITheme.Huge, color);
             UITheme.ShadowLabel(new Rect(0f, UITheme.Height * 0.42f + 62f, UITheme.Width, 30f),
                 $"{Period(sleepHour)}, {sleepHour:00}:00 · You feel rested{(sleepSaved ? " · Game saved" : string.Empty)}", UITheme.BodyCenter, color);
         }

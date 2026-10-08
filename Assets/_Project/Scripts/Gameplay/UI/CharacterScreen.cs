@@ -385,7 +385,9 @@ namespace Beast.Gameplay
                     EventBus<HudMessageEvent>.Raise(new HudMessageEvent("Bag is full"));
                 y += 34f;
                 string bonus = Describe(item.Modifiers);
-                GUI.Label(new Rect(x, y, width, 24f), bonus.Length > 0 ? $"<color={UITheme.GoodOnInkHex}>{bonus}</color>" : "No stat bonuses", metaStyle);
+                string wear = equipment.TryGetComponent(out GearCondition condition) ? condition.ConditionText(item) : string.Empty;
+                string line = bonus.Length > 0 ? $"<color={UITheme.GoodOnInkHex}>{bonus}</color>" : "No stat bonuses";
+                GUI.Label(new Rect(x, y, width, 24f), wear.Length > 0 ? $"{line}   {wear}" : line, metaStyle);
             }
             else
             {

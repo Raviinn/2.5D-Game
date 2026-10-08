@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cb0380e530b8894fa6d95e18a5be180, type: 3}
+  m_Name: Enemy_Wolf
+  m_EditorClassIdentifier: 
+  id: enemy_wolf
+  DisplayName: Grey Wolf
+  MaxHealth: 38
+  MaxPoise: 18
+  IsTrainingDummy: 0
+  MoveSpeed: 5.2
+  TurnSpeed: 720
+  AggroRange: 13
+  AttackRange: 2.2
+  AttackCooldown: 1.3
+  Attacks:
+  - {fileID: 11400000, guid: 07cff0a40dd331941a466132c6635d55, type: 2}
+  HoldDistance: 4
+  GiveUpAfter: 4
+  LeashRange: 26
+  Ranged: 0
+  ShootRange: 16
+  PreferredDistance: 9
+  DrawTime: 0.9
+  ShotCooldown: 2.6
+  ArrowSpeed: 22
+  ArrowDamage: 14
+  ArrowPoiseDamage: 12
+  Shield: 0
+  GuardMax: 60
+  GuardCostPerDamage: 1.4
+  GuardRegen: 16
+  GuardDamageReduction: 0.9
+  GuardBreakStagger: 1.8
+  GuardMoveShare: 0.6
+  PackHunter: 1
+  RetreatAfterAttack: 0.9
+  SuperArmor: 0
+  NightDamageBonus: 0.3
+  NightAggroBonus: 0.4
+  NightSpeedBonus: 0.15
+  NightExtraLootRolls: 1
+  NightGoldBonus: 0.5
+  XpReward: 18
+  StandingReward: 1
+  Loot: {fileID: 11400000, guid: 588bd077325fc8a4abcb71eddf412910, type: 2}
+  PlateHeight: 1.3
+  RespawnDelay: 45

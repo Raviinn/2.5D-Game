@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cb0380e530b8894fa6d95e18a5be180, type: 3}
+  m_Name: Enemy_BlightBrute
+  m_EditorClassIdentifier: 
+  id: enemy_blightbrute
+  DisplayName: Blighted Brute
+  MaxHealth: 260
+  MaxPoise: 150
+  IsTrainingDummy: 0
+  MoveSpeed: 2.6
+  TurnSpeed: 240
+  AggroRange: 14
+  AttackRange: 2.8
+  AttackCooldown: 2
+  Attacks:
+  - {fileID: 11400000, guid: a32cf1f8ecee7ad42bb9b0b92a3feecd, type: 2}
+  - {fileID: 11400000, guid: d4d512ca914c70d429582980daf7e31c, type: 2}
+  HoldDistance: 4
+  GiveUpAfter: 6
+  LeashRange: 20
+  Ranged: 0
+  ShootRange: 16
+  PreferredDistance: 9
+  DrawTime: 0.9
+  ShotCooldown: 2.6
+  ArrowSpeed: 22
+  ArrowDamage: 14
+  ArrowPoiseDamage: 12
+  Shield: 0
+  GuardMax: 60
+  GuardCostPerDamage: 1.4
+  GuardRegen: 16
+  GuardDamageReduction: 0.9
+  GuardBreakStagger: 1.8
+  GuardMoveShare: 0.6
+  PackHunter: 0
+  RetreatAfterAttack: 0
+  SuperArmor: 1
+  NightDamageBonus: 0
+  NightAggroBonus: 0
+  NightSpeedBonus: 0
+  NightExtraLootRolls: 1
+  NightGoldBonus: 0.5
+  XpReward: 120
+  StandingReward: 8
+  Loot: {fileID: 11400000, guid: 8ba318230bc11e54c965fc746d028a8d, type: 2}
+  PlateHeight: 3.1
+  RespawnDelay: 0

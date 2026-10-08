@@ -5,8 +5,9 @@ using UnityEngine.InputSystem;
 namespace Beast.Gameplay
 {
     /// <summary>
-    /// Dialogue presentation: an ink band across the bottom of the screen with the portrait (framed in paper), the
-    /// speaker's name in vermilion capitals, typewriter text and the choices as paper rows (the selected one red).
+    /// Dialogue presentation, cinematic style (the camera frames the speaker over your shoulder, see
+    /// ThirdPersonCamera): a soft shade along the bottom edge, the speaker's name centred in gold over a thin rule,
+    /// the line centred under it (typewriter), and the answer choices as dark pills on the right.
     /// Advance: Space / Enter / F / click / A (first press finishes the typewriter).
     /// Choices: hover + click, Up/Down + Advance, or number keys.
     /// </summary>
@@ -24,7 +25,8 @@ namespace Beast.Gameplay
         int selected;
         int hoveredChoice = -1;
         bool navHeld;
-        GUIStyle nameStyle, lineStyle, choiceStyle;
+        GUIStyle nameStyle, lineStyle, narrationStyle, choiceStyle, discStyle;
+        Texture2D shadeTex, ruleTex;
 
         void Start()
         {
@@ -113,91 +115,126 @@ namespace Beast.Gameplay
             UITheme.Begin(-1);
             EnsureStyles();
 
-            int choiceCount = LineFullyShown ? runner.Choices.Count : 0;
-            float height = 232f + choiceCount * (ChoiceHeight + 8f);
-            // The band runs past both screen edges, so its ragged brush ends never show.
-            var band = new Rect(-60f, UITheme.Height - height, UITheme.Width + 120f, height);
-            UITheme.Fill(new Rect(0f, band.y - 60f, UITheme.Width, 60f), new Color(0f, 0f, 0f, 0.12f));
-            UITheme.Fill(new Rect(0f, band.y, UITheme.Width, height), new Color(UITheme.Ink.r, UITheme.Ink.g, UITheme.Ink.b, 0.9f));
-            UITheme.Fill(new Rect(0f, band.y, UITheme.Width, 2f), new Color(1f, 1f, 1f, 0.12f));
+            float width = UITheme.Width, height = UITheme.Height;
+            // A soft shade rising from the bottom edge instead of a box: the camera frames the speaker above it.
+            GUI.DrawTexture(new Rect(0f, height - 360f, width, 360f), shadeTex);
 
-            float contentWidth = Mathf.Min(1180f, UITheme.Width - 80f);
-            float left = (UITheme.Width - contentWidth) * 0.5f;
-            var portrait = new Rect(left, band.y + 34f, 150f, 150f);
-            DrawPortrait(portrait);
-
-            float textX = portrait.xMax + 34f;
-            float textWidth = left + contentWidth - textX;
             bool narration = string.IsNullOrEmpty(runner.CurrentSpeakerName);
+            float textWidth = Mathf.Min(1100f, width - 120f);
+            float textX = (width - textWidth) * 0.5f;
             if (!narration)
-                GUI.Label(new Rect(textX, band.y + 24f, textWidth, 34f), UITheme.Spaced(runner.CurrentSpeakerName), nameStyle);
-
-            string visible = runner.CurrentText.Substring(0, VisibleCharacters);
-            string text = narration ? $"<i><color={UITheme.MutedOnInkHex}>{visible}</color></i>" : visible;
-            GUI.Label(new Rect(textX, band.y + (narration ? 34f : 66f), textWidth, 110f), text, lineStyle);
-
-            hoveredChoice = -1;
-            var mouse = Event.current.mousePosition;
-            for (int i = 0; i < choiceCount; i++)
             {
-                var rect = new Rect(textX, band.y + 184f + i * (ChoiceHeight + 8f), Mathf.Min(textWidth, 760f), ChoiceHeight);
-                bool hovered = rect.Contains(mouse);
-                if (hovered)
+                ShadowText(new Rect(textX, height - 236f, textWidth, 40f), runner.CurrentSpeakerName, nameStyle, UITheme.InkGold, null);
+                // A thin gold rule fading out at both ends, with a small diamond in the middle.
+                float ruleWidth = Mathf.Min(760f, textWidth);
+                GUI.DrawTexture(new Rect((width - ruleWidth) * 0.5f, height - 192f, ruleWidth, 2f), ruleTex);
+                UITheme.DrawIcon(new Rect(width * 0.5f - 6f, height - 197f, 12f, 12f), UITheme.DiamondIcon, UITheme.InkGold);
+            }
+
+            // The whole line is laid out at once (the unrevealed part transparent), so centred text never shifts
+            // while it types out.
+            string full = runner.CurrentText;
+            int shown = VisibleCharacters;
+            var lineRect = new Rect(textX, height - (narration ? 200f : 176f), textWidth, 130f);
+            ShadowText(lineRect, full.Substring(0, shown), narration ? narrationStyle : lineStyle,
+                narration ? UITheme.MutedOnInk : UITheme.OffWhite, full.Substring(shown));
+
+            int choiceCount = LineFullyShown ? runner.Choices.Count : 0;
+            DrawChoices(choiceCount);
+
+            float hintsY = height - 40f;
+            float hintsRight = width - 40f;
+            if (choiceCount == 0 && LineFullyShown)
+            {
+                // Blinking "continue" arrow (pointing down) under the text, and the key hints bottom right.
+                float alpha = 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 3f));
+                UITheme.DrawIcon(new Rect(width * 0.5f - 9f, height - 46f, 18f, 18f), UITheme.ArrowIcon,
+                    new Color(UITheme.InkGold.r, UITheme.InkGold.g, UITheme.InkGold.b, alpha), flipY: true);
+                UITheme.KeyHints(hintsRight, hintsY, true, ("Space", "Continue"), ("Esc", "Leave"));
+            }
+            else if (choiceCount > 0)
+            {
+                UITheme.KeyHints(hintsRight, hintsY, true, ($"1–{choiceCount}", "Choose"), ("Esc", "Leave"));
+            }
+        }
+
+        /// <summary>
+        /// Answer choices: dark rounded pills stacked on the right, above the line, each with a speech-bubble disc
+        /// (showing the number key on keyboard). The selected one is lit gold.
+        /// </summary>
+        void DrawChoices(int count)
+        {
+            hoveredChoice = -1;
+            if (count == 0) return;
+            float width = UITheme.Width, height = UITheme.Height;
+            float pillWidth = Mathf.Min(600f, width * 0.4f);
+            float x = Mathf.Min(width - pillWidth - 40f, width * 0.5f + 180f);
+            float bottom = height - 270f;
+            var mouse = Event.current.mousePosition;
+            for (int i = 0; i < count; i++)
+            {
+                var rect = ChoiceRect(i, count, x, bottom, pillWidth);
+                if (rect.Contains(mouse))
                 {
                     hoveredChoice = i;
                     selected = i;
                 }
                 bool isSelected = i == selected;
-                UITheme.PaperCard(rect, isSelected);
-                var chip = new Rect(rect.x + 10f, rect.y + 9f, 24f, 24f);
-                UITheme.KeyCap(chip);
-                GUI.Label(chip, UITheme.UsingGamepad ? (isSelected ? "A" : "") : (i + 1).ToString(), UITheme.KeyStyle);
-                choiceStyle.normal.textColor = isSelected ? UITheme.OffWhite : UITheme.Ink;
-                GUI.Label(new Rect(rect.x + 48f, rect.y, rect.width - 58f, rect.height), runner.Choices[i], choiceStyle);
-            }
-
-            float hintsY = UITheme.Height - 40f;
-            if (choiceCount == 0 && LineFullyShown)
-            {
-                // Blinking "continue" arrow (pointing down) beside the hint.
-                float alpha = 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 3f));
-                float hintsX = UITheme.KeyHints(left + contentWidth, hintsY, true, ("Space", "Continue"));
-                UITheme.DrawIcon(new Rect(hintsX - 26f, hintsY + 4f, 16f, 16f), UITheme.ArrowIcon,
-                    new Color(UITheme.InkGold.r, UITheme.InkGold.g, UITheme.InkGold.b, alpha), flipY: true);
-            }
-            else if (choiceCount > 0)
-            {
-                UITheme.KeyHints(left + contentWidth, hintsY, true, ($"1–{choiceCount}", "Choose"), ("Esc", "Leave"));
+                UITheme.Pill(rect, 0.9f);
+                if (isSelected)
+                {
+                    UITheme.Pill(rect, 0.6f); // a shade darker, with a gold bookmark edge on the left
+                    UITheme.Fill(new Rect(rect.x + 6f, rect.y + 10f, 3f, rect.height - 20f), UITheme.InkGold);
+                }
+                var disc = new Rect(rect.x + 16f, rect.y + (rect.height - 30f) * 0.5f, 30f, 30f);
+                UITheme.DrawIcon(disc, UITheme.CircleIcon, isSelected ? UITheme.InkGold : UITheme.OffWhite);
+                string glyph = UITheme.UsingGamepad ? (isSelected ? "A" : "…") : (i + 1).ToString();
+                GUI.Label(disc, glyph, discStyle);
+                choiceStyle.normal.textColor = isSelected ? UITheme.InkGold : UITheme.OffWhite;
+                GUI.Label(new Rect(rect.x + 58f, rect.y, rect.width - 72f, rect.height), runner.Choices[i], choiceStyle);
             }
         }
 
-        void DrawPortrait(Rect rect)
-        {
-            // A paper mat around the portrait.
-            UITheme.Fill(new Rect(rect.x - 6f, rect.y - 6f, rect.width + 12f, rect.height + 12f), UITheme.Paper);
-            var data = runner.CurrentSpeakerData;
-            if (data != null && data.Portrait != null)
-            {
-                var sprite = data.Portrait;
-                var tex = sprite.texture;
-                var r = sprite.textureRect;
-                GUI.DrawTextureWithTexCoords(rect, tex, new Rect(r.x / tex.width, r.y / tex.height, r.width / tex.width, r.height / tex.height));
-                return;
-            }
+        static Rect ChoiceRect(int index, int count, float x, float bottom, float width) =>
+            new(x, bottom - (count - index) * (ChoiceHeight + 10f), width, ChoiceHeight);
 
-            // Placeholder: the speaker's colour with their initial (narration gets an ink square).
-            UITheme.Fill(rect, data != null ? data.PlaceholderColor : new Color(0.12f, 0.12f, 0.12f));
-            UITheme.Fill(new Rect(rect.x, rect.y, rect.width, rect.height * 0.4f), new Color(1f, 1f, 1f, 0.08f));
-            string initial = string.IsNullOrEmpty(runner.CurrentSpeakerName) ? "…" : runner.CurrentSpeakerName.Substring(0, 1);
-            UITheme.ShadowLabel(rect, initial, UITheme.Huge, UITheme.OffWhite);
+        /// <summary>Text with a drop shadow; <paramref name="hidden"/> is laid out but invisible (typewriter).</summary>
+        static void ShadowText(Rect rect, string visible, GUIStyle style, Color color, string hidden)
+        {
+            string tail = string.IsNullOrEmpty(hidden) ? string.Empty : $"<color=#00000000>{hidden}</color>";
+            GUI.Label(new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height), $"<color=#000000c0>{visible}</color>{tail}", style);
+            GUI.Label(rect, $"<color=#{ColorUtility.ToHtmlStringRGBA(color)}>{visible}</color>{tail}", style);
         }
 
         void EnsureStyles()
         {
+            if (shadeTex == null)
+            {
+                shadeTex = new Texture2D(1, 64, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.DontSave };
+                for (int y = 0; y < 64; y++)
+                {
+                    float up = y / 63f; // IMGUI draws texture row 0 at the bottom of the rect
+                    shadeTex.SetPixel(0, y, new Color(0f, 0f, 0f, 0.8f * (1f - up * up)));
+                }
+                shadeTex.Apply();
+                ruleTex = new Texture2D(64, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.DontSave };
+                var gold = UITheme.InkGold;
+                for (int x = 0; x < 64; x++)
+                {
+                    float middle = 1f - Mathf.Abs(x / 63f * 2f - 1f);
+                    ruleTex.SetPixel(x, 0, new Color(gold.r, gold.g, gold.b, 0.85f * Mathf.SmoothStep(0f, 1f, middle)));
+                }
+                ruleTex.Apply();
+            }
             if (nameStyle != null && nameStyle.font == UITheme.InkHeader.font) return;
-            nameStyle = new GUIStyle(UITheme.InkHeader) { normal = { textColor = UITheme.Vermilion } };
-            lineStyle = new GUIStyle(UITheme.InkBody) { fontSize = Mathf.RoundToInt(UITheme.InkBody.fontSize * 1.18f) };
-            choiceStyle = new GUIStyle(UITheme.PaperBody) { wordWrap = false, alignment = TextAnchor.MiddleLeft };
+            nameStyle = new GUIStyle(UITheme.InkHeader)
+                { alignment = TextAnchor.MiddleCenter, richText = true, fontSize = Mathf.RoundToInt(UITheme.InkHeader.fontSize * 1.35f) };
+            lineStyle = new GUIStyle(UITheme.InkBody)
+                { alignment = TextAnchor.UpperCenter, richText = true, wordWrap = true, fontSize = Mathf.RoundToInt(UITheme.InkBody.fontSize * 1.4f) };
+            narrationStyle = new GUIStyle(lineStyle) { fontStyle = FontStyle.Italic };
+            choiceStyle = new GUIStyle(UITheme.InkBody)
+                { wordWrap = false, richText = false, alignment = TextAnchor.MiddleLeft, fontSize = Mathf.RoundToInt(UITheme.InkBody.fontSize * 1.12f) };
+            discStyle = new GUIStyle(UITheme.KeyStyle) { alignment = TextAnchor.MiddleCenter, normal = { textColor = UITheme.Ink } };
         }
     }
 }

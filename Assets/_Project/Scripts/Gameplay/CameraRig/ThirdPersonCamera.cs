@@ -6,6 +6,8 @@ namespace Beast.Gameplay
 {
     /// <summary>
     /// Lightweight orbit camera with collision, lock-on framing and screen shake.
+    /// During a conversation it glides to an over-the-shoulder shot: behind and to the right of the player, at eye
+    /// height, looking at the NPC (the player's back in the left foreground), and glides back afterwards.
     /// Can be swapped for Cinemachine later without touching gameplay code.
     /// </summary>
     public sealed class ThirdPersonCamera : MonoBehaviour
@@ -24,6 +26,14 @@ namespace Beast.Gameplay
         [SerializeField, Tooltip("How quickly the camera swings behind the player toward the target.")]
         float lockOnSharpness = 10f;
 
+        // Conversation shot (constants, so a scene saved with older values can't keep a bad framing).
+        const float DialogueBlendTime = 0.7f;           // seconds to glide in and out
+        const float DialogueBehind = 2.5f;              // metres behind the player
+        const float DialogueRight = 1.0f;               // metres to the player's right
+        const float DialogueEyeHeight = 1.7f;           // metres above the player's feet
+        const float DialogueLookHeight = 0.95f;         // aim a little below the NPC's chest, so they stand clear of the text
+        const float DialogueFieldOfView = 45f;
+
         [Header("Collision")]
         [SerializeField] float collisionRadius = 0.25f;
         [SerializeField] LayerMask collisionMask = ~0;
@@ -36,6 +46,17 @@ namespace Beast.Gameplay
         float shakeStrength;
         float shakeDuration;
         float shakeTimeLeft;
+        DialogueRunner dialogue;
+        Camera cam;
+        float baseFieldOfView;
+        float dialogueBlend;
+        Vector3 dialoguePosition;
+        Quaternion dialogueRotation;
+        float conversationYaw;
+        bool inConversation;
+
+        /// <summary>0 = normal orbit, 1 = fully in the conversation shot.</summary>
+        public float ConversationBlend => dialogueBlend;
 
         // Invisible world-edge walls live on Ignore Raycast: the camera never bumps into them.
         int Mask => collisionMask & ~(1 << 2);
@@ -57,13 +78,28 @@ namespace Beast.Gameplay
             look = Services.Get<InputService>().Look;
             Services.TryGet(out settings);
             if (target != null) yaw = target.eulerAngles.y;
+            cam = GetComponent<Camera>();
+            if (cam != null) baseFieldOfView = cam.fieldOfView;
         }
 
         void LateUpdate()
         {
             if (target == null) return;
 
-            Vector2 delta = look.ReadValue<Vector2>();
+            if (dialogue == null) Services.TryGet(out dialogue);
+            var partner = dialogue != null && dialogue.IsActive ? dialogue.ConversationPartner : null;
+            if (partner != null) AimConversationShot(partner);
+            else if (inConversation)
+            {
+                // The shot is still fully on screen here, so the orbit can jump behind the player unseen.
+                yaw = conversationYaw;
+                pitch = 12f;
+            }
+            inConversation = partner != null;
+            // Unscaled: the game is paused during conversations.
+            dialogueBlend = Mathf.MoveTowards(dialogueBlend, partner != null ? 1f : 0f, Time.unscaledDeltaTime / DialogueBlendTime);
+
+            Vector2 delta = partner != null ? Vector2.zero : look.ReadValue<Vector2>();
             // Mouse delta is already per-frame; stick values need scaling by time.
             bool mouse = look.activeControl?.device is Pointer;
             if (mouse) delta *= mouseSensitivity;
@@ -100,7 +136,49 @@ namespace Beast.Gameplay
             if (Physics.SphereCast(pivot, collisionRadius, back, out var hit, distance, Mask, QueryTriggerInteraction.Ignore))
                 actualDistance = hit.distance;
 
-            transform.SetPositionAndRotation(pivot + back * actualDistance + GetShakeOffset(), rotation);
+            Vector3 position = pivot + back * actualDistance;
+            if (dialogueBlend > 0f)
+            {
+                float t = Mathf.SmoothStep(0f, 1f, dialogueBlend);
+                position = Vector3.Lerp(position, dialoguePosition, t);
+                rotation = Quaternion.Slerp(rotation, dialogueRotation, t);
+            }
+            if (cam != null) cam.fieldOfView = Mathf.Lerp(baseFieldOfView, DialogueFieldOfView, Mathf.SmoothStep(0f, 1f, dialogueBlend));
+            transform.SetPositionAndRotation(position + GetShakeOffset(), rotation);
+        }
+
+        /// <summary>
+        /// The over-the-shoulder shot for a conversation with <paramref name="partner"/>. The orbit's yaw is turned to
+        /// match when the conversation ends, so leaving it glides back to a camera behind the player looking at the NPC.
+        /// </summary>
+        void AimConversationShot(Transform partner)
+        {
+            Vector3 from = target.position;
+            Vector3 forward = partner.position - from;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f) forward = target.forward;
+            forward.Normalize();
+            Vector3 right = Vector3.Cross(Vector3.up, forward);
+
+            Vector3 head = new Vector3(from.x, FeetY(target) + DialogueEyeHeight, from.z);
+            Vector3 wanted = head - forward * DialogueBehind + right * DialogueRight;
+            // Keep the shot out of walls: pull it in toward the player's head if something's in the way.
+            Vector3 offset = wanted - head;
+            if (Physics.SphereCast(head, collisionRadius, offset.normalized, out var hit, offset.magnitude, Mask, QueryTriggerInteraction.Ignore))
+                wanted = head + offset.normalized * hit.distance;
+
+            Vector3 lookAt = new Vector3(partner.position.x, FeetY(partner) + DialogueLookHeight, partner.position.z);
+            dialoguePosition = wanted;
+            dialogueRotation = Quaternion.LookRotation(lookAt - wanted);
+            conversationYaw = Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>Ground level under a character (their transform sits at the middle of their collider).</summary>
+        static float FeetY(Transform character)
+        {
+            if (character.TryGetComponent(out CharacterController body))
+                return character.position.y + body.center.y - body.height * 0.5f;
+            return character.TryGetComponent(out Collider collider) ? collider.bounds.min.y : character.position.y;
         }
 
         Vector3 GetShakeOffset()

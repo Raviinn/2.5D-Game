@@ -1,0 +1,84 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90ec5e8dbbab9b14687917d9c88f224c, type: 3}
+  m_Name: Sheet_Hale
+  m_EditorClassIdentifier: 
+  id: sheet_hale
+  Texture: {fileID: 2800000, guid: ec2cbf5cf7ae28343a9936e986a4c771, type: 3}
+  CellSize: {x: 48, y: 64}
+  PixelsPerUnit: 32
+  Pivot: {x: 0.5, y: 0.03125}
+  MirrorLeft: 1
+  Clips:
+  - Anim: 0
+    StartColumn: 0
+    FrameCount: 4
+    FramesPerSecond: 5
+    Loop: 1
+    StartupFrames: 0
+    ActiveFrames: 0
+  - Anim: 1
+    StartColumn: 4
+    FrameCount: 6
+    FramesPerSecond: 12
+    Loop: 1
+    StartupFrames: 0
+    ActiveFrames: 0
+  - Anim: 2
+    StartColumn: 10
+    FrameCount: 5
+    FramesPerSecond: 10
+    Loop: 0
+    StartupFrames: 2
+    ActiveFrames: 1
+  - Anim: 3
+    StartColumn: 15
+    FrameCount: 1
+    FramesPerSecond: 1
+    Loop: 1
+    StartupFrames: 0
+    ActiveFrames: 0
+  - Anim: 4
+    StartColumn: 16
+    FrameCount: 3
+    FramesPerSecond: 10
+    Loop: 0
+    StartupFrames: 0
+    ActiveFrames: 0
+  - Anim: 5
+    StartColumn: 19
+    FrameCount: 1
+    FramesPerSecond: 1
+    Loop: 1
+    StartupFrames: 0
+    ActiveFrames: 0
+  - Anim: 6
+    StartColumn: 20
+    FrameCount: 1
+    FramesPerSecond: 1
+    Loop: 1
+    StartupFrames: 0
+    ActiveFrames: 0
+  - Anim: 7
+    StartColumn: 21
+    FrameCount: 2
+    FramesPerSecond: 3
+    Loop: 1
+    StartupFrames: 0
+    ActiveFrames: 0
+  - Anim: 8
+    StartColumn: 23
+    FrameCount: 4
+    FramesPerSecond: 6
+    Loop: 1
+    StartupFrames: 0
+    ActiveFrames: 0

@@ -37,6 +37,8 @@ namespace Beast.Gameplay
 
         /// <summary>Set by controllers, e.g. during dodge i-frames.</summary>
         public bool Invulnerable { get; set; }
+        /// <summary>Hits don't stagger or knock back (brutes mid-attack). Damage still lands.</summary>
+        public bool SuperArmor { get; set; }
         /// <summary>Set by AI during attack wind-up so visuals can warn the player.</summary>
         public bool Telegraphing { get; set; }
         /// <summary>Optional; blocking costs stamina when present.</summary>
@@ -115,6 +117,7 @@ namespace Beast.Gameplay
             }
 
             ApplyDamage(damage);
+            if (SuperArmor) return Report(info, damage, IsDead ? HitResult.Killed : HitResult.Hit);
             knockbackVelocity += info.Knockback;
 
             Poise -= info.PoiseDamage;

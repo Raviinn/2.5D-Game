@@ -65,6 +65,14 @@ namespace Beast.Gameplay
 
         // ---------- Items ----------
 
+        /// <summary>More slots (never fewer): the Larger Chest upgrade. Items stay where they are.</summary>
+        public void Grow(int newSlotCount)
+        {
+            if (slots == null || newSlotCount <= slots.Length) return;
+            Array.Resize(ref slots, newSlotCount);
+            Changed?.Invoke();
+        }
+
         /// <summary>Adds as many as fit. Returns how many did NOT fit.</summary>
         public int Add(ItemData item, int count) => AddInternal(item, count, raiseEvent: announceAdds);
 
@@ -202,6 +210,8 @@ namespace Beast.Gameplay
                 return;
             }
 
+            // A chest saved after it was enlarged comes back at its saved size.
+            if (state.itemIds != null && state.itemIds.Length > slots.Length) Array.Resize(ref slots, state.itemIds.Length);
             Array.Clear(slots, 0, slots.Length);
             int count = Mathf.Min(slots.Length, state.itemIds?.Length ?? 0);
             for (int i = 0; i < count; i++)

@@ -28,12 +28,17 @@ namespace Beast.EditorTools
             public bool HasWeapon, HasShield;
             /// <summary>A bow instead of a sword (archers).</summary>
             public bool Bow;
+            /// <summary>A long two-handed weapon (brutes).</summary>
+            public bool Greatsword;
+            /// <summary>Body plan: a person, or a four-legged beast (wolves).</summary>
+            public Creature Creature;
 
             /// <summary>The original placeholder look: short hair, the shield painted in the hair colour, one-handed sword.</summary>
             public CharacterSpriteBuilder.Palette ToBuilder() => new()
             {
                 Body = Body, Trim = Trim, Skin = Skin, Hair = Hair, Weapon = Weapon, Outline = Outline, ShieldFace = Hair,
                 HasWeapon = HasWeapon, HasShield = HasShield, HairStyle = HairStyle.Short, Bow = Bow,
+                Greatsword = Greatsword, Creature = Creature,
             };
         }
 

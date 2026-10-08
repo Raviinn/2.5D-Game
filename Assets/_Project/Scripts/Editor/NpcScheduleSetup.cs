@@ -16,7 +16,7 @@ namespace Beast.EditorTools
     public static class NpcScheduleSetup
     {
         const string TestWorldScenePath = "Assets/_Project/Scenes/World_Test.unity";
-        const string PlacesName = "[NPC Places]";
+        internal const string PlacesName = "[NPC Places]";
 
         [MenuItem("Beast/Setup/Run Milestone 31 Setup (NPC Schedules)", priority = 25)]
         public static void Run()
@@ -86,7 +86,7 @@ namespace Beast.EditorTools
                       "Their places are under [NPC Places]; NPCs work 06:00 to evening and sleep at home at night.");
         }
 
-        static void AddSchedule(GameObject npc, params (float hour, Transform place, string activity, bool indoors)[] entries)
+        internal static void AddSchedule(GameObject npc, params (float hour, Transform place, string activity, bool indoors)[] entries)
         {
             var schedule = npc.AddComponent<NpcSchedule>();
             var so = new SerializedObject(schedule);
@@ -103,7 +103,7 @@ namespace Beast.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static Transform Place(Transform parent, string name, Vector3 position, Vector3 facing)
+        internal static Transform Place(Transform parent, string name, Vector3 position, Vector3 facing)
         {
             var existing = parent.Find(name);
             if (existing != null) return existing;
@@ -114,7 +114,7 @@ namespace Beast.EditorTools
             return go.transform;
         }
 
-        static void FaceTowards(Transform place, Vector3 target)
+        internal static void FaceTowards(Transform place, Vector3 target)
         {
             var to = target - place.position;
             to.y = 0f;
@@ -157,7 +157,7 @@ namespace Beast.EditorTools
         }
 
         /// <summary>A spot about 'radius' from 'centre' with room to stand (tries round the circle from 'startOctant').</summary>
-        static Vector3 ClearSpotNear(Vector3 centre, float radius, int startOctant)
+        internal static Vector3 ClearSpotNear(Vector3 centre, float radius, int startOctant)
         {
             for (int i = 0; i < 8; i++)
             {
@@ -168,7 +168,7 @@ namespace Beast.EditorTools
             return Ground(centre + Vector3.forward * radius);
         }
 
-        static Vector3 Ground(Vector3 at)
+        internal static Vector3 Ground(Vector3 at)
         {
             var from = new Vector3(at.x, 5f, at.z);
             foreach (var hit in Physics.RaycastAll(from, Vector3.down, 10f, ~0, QueryTriggerInteraction.Ignore))

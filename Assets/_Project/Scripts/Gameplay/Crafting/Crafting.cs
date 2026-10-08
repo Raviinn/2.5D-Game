@@ -59,11 +59,16 @@ namespace Beast.Gameplay
             }
 
             if (upgrade != null) equipment.ReplaceEquipped(upgrade, (EquipmentData)recipe.Output);
-            else inventory.Add(recipe.Output, recipe.OutputCount);
+            else inventory.Add(recipe.Output, recipe.OutputCount + ExtraServings(recipe));
 
             EventBus<ItemCraftedEvent>.Raise(new ItemCraftedEvent(recipe));
             return true;
         }
+
+        /// <summary>The Copper Still (Milestone 49): alchemy and cooking make one more.</summary>
+        public static int ExtraServings(RecipeData recipe) =>
+            recipe != null && recipe.Kind is CraftKind.Alchemy or CraftKind.Cooking &&
+            Services.TryGet(out HomesteadUpgrades upgrades) && upgrades.Has(HomesteadUpgradeKind.CopperStill) ? 1 : 0;
 
         static int Take(Inventory from, ItemData item, int wanted)
         {

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c28d511ad6dd3f488eb9a444c8a3e2a, type: 3}
+  m_Name: Recipe_HerbBakedTrout
+  m_EditorClassIdentifier: 
+  id: recipe_herbbakedtrout
+  Kind: 1
+  Inputs:
+  - Item: {fileID: 11400000, guid: 1b1ab1908689cfa4ea97ece2b772c69f, type: 2}
+    Count: 1
+  - Item: {fileID: 11400000, guid: 76c6476854e838942a9e280bf2fac21f, type: 2}
+    Count: 1
+  Output: {fileID: 11400000, guid: 295faf17d1926b645acf5887a93d279d, type: 2}
+  OutputCount: 1

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,6 +24,16 @@ public static class BuildHarness
         Beast.EditorTools.MirrorSetup.Run();
         Beast.EditorTools.NpcScheduleSetup.Run();
         Beast.EditorTools.MusicSetup.Run();
+        Beast.EditorTools.EnemyTypesSetup.Run();
+        Beast.EditorTools.TownsfolkSetup.Run();
+        Beast.EditorTools.DurabilitySetup.Run();
+        Beast.EditorTools.AnimalSetup.Run();
+        Beast.EditorTools.SeasonsSetup.Run();
+        Beast.EditorTools.ForagingSetup.Run();
+        Beast.EditorTools.ContractsSetup.Run();
+        Beast.EditorTools.UpgradesSetup.Run();
+        Beast.EditorTools.HudPolishSetup.Run();
+        Beast.EditorTools.TutorialSetup.Run();
 
         PlayerSettings.runInBackground = true; // unattended runs must not pause when the window loses focus
         PlayerSettings.productName = "BeastHarness"; // separate save folder: never touches the real game's saves

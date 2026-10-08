@@ -21,5 +21,8 @@
 INCLUDE Externals.ink
 INCLUDE Oswin.ink
 INCLUDE Brenna.ink
+INCLUDE Maren.ink
+INCLUDE Tobin.ink
+INCLUDE Hale.ink
 
 -> END

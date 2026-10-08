@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc9be5912c41d8f47b851ea9250c96f7, type: 3}
+  m_Name: Armor_FurLeggings
+  m_EditorClassIdentifier: 
+  id: armor_furleggings
+  DisplayName: Fur Leggings
+  Description: Wolf pelts stitched over cloth. Warm on night watches; the fur turns
+    a blade more often than you'd think.
+  Category: 4
+  Icon: {fileID: 21300000, guid: 4ff9e29db95da6142a3d68156057fd51, type: 3}
+  PlaceholderColor: {r: 0.54901963, g: 0.5176471, b: 0.4627451, a: 1}
+  MaxStack: 1
+  BaseValue: 55
+  Slot: 3
+  Modifiers:
+  - Stat: 6
+    Flat: 9
+    Percent: 0
+  - Stat: 2
+    Flat: 10
+    Percent: 0
+  Durability: 180

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.25 |
+| **Version** | 1.26 |
 | **Last updated** | 2026-10-08 |
 | **Author** | Joseph |
 | **Engine** | Unity 6 LTS (6000.0.34f1), URP |
@@ -988,6 +988,17 @@ Each step builds its milestone's assets and scene objects. All steps are safe to
 | Run Milestone 7 Setup (Progression) | Progression config, Knight & Farming skill trees, skill attacks, weapons & armor, Brenna's Forge + blacksmith NPC, XP rewards, player stats/progression/equipment/skills, character screen |
 | Run Milestone 8 Setup (Dialogue & Quests) | Compiles Ink, speakers, 2 story + 2 side quests + 3 contracts, dialogue runner & box, quest UI, NPC conversations, contracts board, quest log on the player |
 | Run Milestone 9 Setup (Environment Art) | EnvBillboard / MinimapOnly layers, generated environment textures, materials and meshes, dressed buildings, `Environment_Dressing` (square, roads, fence, props, trees, rocks, ground cover), lighting & fog. HUD, pause menu, quest tracker and minimap need no setup: they're added automatically to any scene with a Player |
+| Run Milestone 37 Setup (Chest Off the Field) | Moves the storage chest off the farm field to the floor beside the bed (the Milestone 27 setup now avoids the field too) |
+| Run Milestone 40 Setup (New Enemy Types) | Grey Wolf pack (north-west woods), Bandit Shieldbearer (camp), night-only Blighted Brute (dead wood), their sprites, attacks and loot (Wolf Pelt, Blight Ichor), Fur Leggings and Ichor Draught recipes |
+| Run Milestone 43 Setup (More Townsfolk) | Maren the healer (shop, free healing), Tobin the farmer, Captain Hale of the watch (works nights), their routines and four side quests |
+| Run Milestone 44 Setup (Durability & Repair) | Durability on weapons and armour, Gear Condition on the player; Brenna mends gear for gold, the workbench with Iron Scrap |
+| Run Milestone 45 Setup (Animals) | A pen with a coop, a feed trough, three hens and Bess the cow; Egg, Milk, Animal Feed (Oswin) and three recipes |
+| Run Milestone 46 Setup (Seasons) | Seasons for the crops, Pumpkins (autumn) and Frost Kale (winter), Pumpkin Soup, the Season Keeper |
+| Run Milestone 47 Setup (Foraging & Fishing) | Eight forage spots, a fishing pond (perch, trout, night pike), a Fishing Rod at Oswin's, four recipes, Player Fishing |
+| Run Milestone 48 Setup (Rotating Contracts) | Eight new contracts in the board's pool; the board posts four a day |
+| Run Milestone 49 Setup (Homestead Upgrades) | The homestead plans by the bed and the (hidden) kitchen garden |
+| Run Milestone 51 Setup (Name Plates & HUD) | Name-plate heights for wolves and the brute |
+| Run Milestone 53 Setup (Tutorial) | The first-day guide |
 | Run Milestone 33 Setup (Music) | Synthesises the four placeholder music loops into `Audio/Placeholder` and adds them to the SoundLibrary (run Milestone 20 first). Keeps tracks you've swapped in |
 | Run Milestone 31 Setup (NPC Schedules) | Daily routines for Oswin and Brenna (Npc Schedule components) and their places under `[NPC Places]` (stall, forge, the well, the contract board, each one's house door). Kept on re-run |
 | Run Milestone 28 Setup (Names & Mirror) | The standing `Mirror` near the bed (kept on re-run) with a `Mirror_Glass` material, and a recompile of the Ink story (adds `player_name()`). Name entry needs no setup |
@@ -1077,7 +1088,7 @@ Damage values are before the attacker's Attack stat and the target's Defense.
 | 1 | **Backbone** | ✅ Verified | Bootstrapper, services, events, save/load, input, game states, world clock, data layer |
 | 2 | **Combat prototype** | ✅ Verified — *fun* | Knight (2 styles), Bandit, Dummy; dodge/block/parry, lock-on, hit-stop |
 | 3 | **Sprite tech** | ✅ Verified | 8-dir billboards, shadow quads, attack-synced animation, placeholder sheets |
-| 4 | **Systems** | 🟡 In progress | 4a Items/inventory/loot ✅ · 4b Farming ✅ · 4c Economy & shops ✅ · 4d Stats & progression ✅ · 4e Dialogue & quests 🟡 (Ink, quests, contracts — awaiting test) · Light reputation 🟡 (awaiting test) · Climbing & ledges 🟡 (awaiting test) · Sprite shadows 🟡 (awaiting test) · Smarter enemies 🟡 (awaiting test) · Day/night & weather 🟡 (awaiting test) · Night danger & fatigue 🟡 (awaiting test) · Main menu & save slots 🟡 (awaiting test) · Settings 🟡 (awaiting test) · Item icons 🟡 · Character creator & weapon looks 🟡 · Placeholder sound 🟡 (awaiting test) · Fall damage & climbing down 🟡 · Archers & jump links 🟡 · Crafting 🟡 · Storage chest 🟡 · Names & mirror 🟡 · NPC schedules 🟡 · Music 🟡 · Controller navigation 🟡 · Cleanups & first Windows build ✅ |
+| 4 | **Systems** | 🟡 In progress | 4a Items/inventory/loot ✅ · 4b Farming ✅ · 4c Economy & shops ✅ · 4d Stats & progression ✅ · 4e Dialogue & quests 🟡 (Ink, quests, contracts — awaiting test) · Light reputation 🟡 (awaiting test) · Climbing & ledges 🟡 (awaiting test) · Sprite shadows 🟡 (awaiting test) · Smarter enemies 🟡 (awaiting test) · Day/night & weather 🟡 (awaiting test) · Night danger & fatigue 🟡 (awaiting test) · Main menu & save slots 🟡 (awaiting test) · Settings 🟡 (awaiting test) · Item icons 🟡 · Character creator & weapon looks 🟡 · Placeholder sound 🟡 (awaiting test) · Fall damage & climbing down 🟡 · Archers & jump links 🟡 · Crafting 🟡 · Storage chest 🟡 · Names & mirror 🟡 · NPC schedules 🟡 · Music 🟡 · Controller navigation 🟡 · Cleanups & first Windows build ✅ · Batch 2 (M36–M53: dialogue camera, chest, minimap trail, new enemies, townsfolk, durability, animals, seasons, foraging & fishing, contracts, upgrades, key rebinding, HUD polish, names in dialogue, tutorial) 🟡 |
 | 5 | Vertical slice | ⬜ | Prologue + homestead + 1 wild zone, polished; playtest with strangers |
 | 6 | Steam page + demo | ⬜ | Wishlists, devlogs |
 | 7 | Content & polish | ⬜ | Full v1 region |
@@ -1143,7 +1154,6 @@ Requested features and accepted compromises, to revisit before the vertical slic
 | Prototype UI (IMGUI) | Tech debt | Every screen shares one theme, scales with resolution and works with mouse, pad and arrow keys (Milestone 35) | Port to UI Toolkit when real art arrives (§20) |
 | **Full regression test pass** | QA | Not yet run. `Test_Checklist.md` (MegaGame101 folder) covers Milestones 1 → 4d, ~150 checks | Run the whole checklist with fresh saves and Error Pause on; fix anything found. Do this before the vertical slice (or sooner if bugs appear). Extend the checklist with each new milestone |
 | Generated environment layout | Tooling | The Milestone 9 setup rebuilds `Environment_Dressing` from scratch on every run | Hand-built levels replace it at the vertical slice |
-| Enemy name plates through walls | UI | An enemy's name and health bar show even when a house is between you and it (seen at night in town) | Hide plates without a line of sight |
 
 ---
 
@@ -1172,6 +1182,7 @@ Requested features and accepted compromises, to revisit before the vertical slic
 | 2026-09-29 | 0.5 | Milestone 3 verified; sprite shadow shader deferred. Milestone 4a: items, inventory, loot, consumables, gold, inventory screen. |
 | 2026-09-29 | 0.6 | 4a verified. Climbing & ledge grab added to backlog. Milestone 4b farming: interaction system, field, Turnip & Healroot, watering/wilt/death, regrowth, bed. |
 | 2026-09-30 | 0.7 | 4b verified. Milestone 4c economy: shop pricing, supply & demand, restock, merchant Oswin, trade screen, trade events, reputation price hook. |
+| 2026-10-09 | 1.26 | **Batch 2 (Milestones 36–53).** **36** Conversations use a cinematic over-the-shoulder camera with the line centred at the bottom and choices on the right. **37** The storage chest stands beside the bed, off the farm field. **38** A gold dotted trail on the minimap and map leads to the tracked target along walkable ground. **40** Grey wolves (packs that flank and dart away), the Bandit Shieldbearer (blocks from the front until its guard breaks) and the night-only Blighted Brute (super armour mid-swing). **43** Maren the healer, Tobin the farmer and Captain Hale (works nights), four side quests. **44** Gear wears out (weapons on blows landed, armour on hits taken); broken gear gives no bonus; Brenna and the workbench mend it. **45** Hens and a cow: fill the trough, collect eggs and milk. **46** Four 14-day seasons with seasonal crops, look (snow in winter), weather and two festivals. **47** Forage spots and a fishing pond with a timing game. **48** The contracts board posts four contracts a day from a pool of twelve. **49** Homestead plans: Kitchen Garden, Larger Chest, Copper Still, Hay Loft. **50** Every key and button can be rebound (Settings → Controls). **51** Name plates hide behind walls and sit at the right height; a lock-on target bar; hits show their direction. **52** People use your name and react to night, rain, wounds and your gear. **53** A first-day guide, one-off tips, and a How to play page. |
 | 2026-10-08 | 1.25 | **Milestone 23 — cleanups.** Characters are drawn as sprites in the Scene view outside Play Mode (editor-only; toggle under Beast). The unused SampleScene is removed (it was already out of the build list). New Beast → Build → Windows (Development / Release). First release build: 107 MB, starts cleanly and passes the main-menu test (new game into the world). |
 | 2026-10-08 | 1.24 | **Milestone 35 — controller support.** Kept the IMGUI screens (the UI Toolkit port waits for real art) and added navigation to every themed control: focus frame, D-pad / stick / arrow keys to move, A / Enter to press, left / right on sliders and steppers, scroll-to-focus, B to back out (now also bound to Resume), pad labels in key hints and key caps, a Random name button for pad players. Bag slots are navigable and show details on focus. |
 | 2026-10-08 | 1.23 | **Milestone 33 — placeholder music.** Four synthesised folk-style loops (title, day, night, combat) that crossfade by game state, clock and danger: combat music while enemies chase you nearby, holding a few seconds after. Quieter under menus. Settings → Audio → Music now does something. |

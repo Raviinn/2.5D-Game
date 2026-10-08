@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7604650e9ce23fe4db4d83738dd72438, type: 3}
+  m_Name: Item_WildGarlic
+  m_EditorClassIdentifier: 
+  id: item_wildgarlic
+  DisplayName: Wild Garlic
+  Description: Broad leaves that smell of garlic. Spring, in the shade of the woods.
+  Category: 3
+  Icon: {fileID: 21300000, guid: a57a479a703b63d43b8ec82bea12e749, type: 3}
+  PlaceholderColor: {r: 0.8392157, g: 0.9019608, b: 0.76862746, a: 1}
+  MaxStack: 99
+  BaseValue: 7

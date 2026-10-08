@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7604650e9ce23fe4db4d83738dd72438, type: 3}
+  m_Name: Item_Pumpkin
+  m_EditorClassIdentifier: 
+  id: item_pumpkin
+  DisplayName: Pumpkin
+  Description: A fat orange pumpkin. Sells well; makes a fine soup.
+  Category: 3
+  Icon: {fileID: 21300000, guid: c3e3410607575cf44a32bce1c10d54e6, type: 3}
+  PlaceholderColor: {r: 0.9019608, g: 0.50980395, b: 0.15686275, a: 1}
+  MaxStack: 99
+  BaseValue: 40

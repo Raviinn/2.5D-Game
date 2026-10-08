@@ -31,7 +31,13 @@ namespace Beast.Gameplay
 
         void Update()
         {
-            if (!cycleAction.WasPressedThisFrame() || SelectedSeed == null) return;
+            if (cycleAction.WasPressedThisFrame()) CycleSeed();
+        }
+
+        /// <summary>Switches to the next kind of seed in the bag (V).</summary>
+        public void CycleSeed()
+        {
+            if (SelectedSeed == null) return;
             selectedSeed = NextSeedAfter(selectedSeed);
             EventBus<HudMessageEvent>.Raise(new HudMessageEvent($"Seeds: {selectedSeed.DisplayName}"));
         }

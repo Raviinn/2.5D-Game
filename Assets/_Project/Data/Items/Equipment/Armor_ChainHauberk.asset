@@ -28,3 +28,4 @@ MonoBehaviour:
   - Stat: 1
     Flat: 10
     Percent: 0
+  Durability: 300

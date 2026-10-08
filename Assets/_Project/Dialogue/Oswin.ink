@@ -8,11 +8,26 @@
 { quest_state("quest_bandittrouble") == "ready": -> bandits_done }
 { quest_state("quest_tasteofhome") == "ready": -> turnips_done }
 { standing_tier() >= 2 && not trusted_thanks: -> trusted_thanks }
-{ oswin == 1:
+{
+- oswin == 1:
     Oswin: A new face! And not a hungry-looking one, for once.
     Oswin: Name's Oswin. I sell what little there is to sell, and buy whatever you drag back from the wilds.
+- festival() == "Planting Festival":
+    Oswin: Happy Planting Festival! Seeds are half price today. Plant something hopeful.
+- festival() == "Harvest Fair":
+    Oswin: The Harvest Fair! I'm paying half as much again for anything you grew. Bring it all.
+- hurt():
+    Oswin: {player_name()}! You're bleeding. Maren's by the square; go and see her before you buy anything.
+- is_night():
+    Oswin: {~Late for shopping, {player_name()}. Lucky I don't sleep much.|Keep your voice down; the night has ears.}
+- weather() == "Rain":
+    Oswin: {~Come in out of the rain, {player_name()}.|Good weather for turnips, bad for business.}
+- season() == "Winter":
+    Oswin: {~Cold enough to freeze the coin in your purse.|Winter stock's thin. Frost kale seeds, if you're brave.|Stay warm, {player_name()}.}
+- standing_tier() >= 3:
+    Oswin: {~{player_name()}! The town's favourite farmer.|Ah, {player_name()}. People ask after you, you know.}
 - else:
-    Oswin: {~Back again, friend.|Ah, the farmer with the green field.|Still in one piece? Good.|Business is slow. Talk is free.}
+    Oswin: {~Back again, {player_name()}.|Ah, the farmer with the green field.|Still in one piece? Good.|Business is slow. Talk is free.}
 }
 -> menu
 

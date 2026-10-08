@@ -13,7 +13,20 @@ $runs = @(
     @{ flag = "-styleharness"; tag = "\[StyleTest\]"; name = "style"; timeout = 300 },
     @{ flag = "-craftharness"; tag = "\[CraftTest\]"; name = "craft"; timeout = 300 },
     @{ flag = "-townharness"; tag = "\[TownTest\]"; name = "town"; timeout = 300 },
-    @{ flag = "-padharness"; tag = "\[PadTest\]"; name = "pad"; timeout = 300 }
+    @{ flag = "-padharness"; tag = "\[PadTest\]"; name = "pad"; timeout = 300 },
+    @{ flag = "-cinemaharness"; tag = "\[CinemaTest\]"; name = "cinema"; timeout = 300 },
+    @{ flag = "-foeharness"; tag = "\[FoeTest\]"; name = "foe"; timeout = 300 },
+    @{ flag = "-folkharness"; tag = "\[FolkTest\]"; name = "folk"; timeout = 300 },
+    @{ flag = "-gearharness"; tag = "\[GearTest\]"; name = "gear"; timeout = 300 },
+    @{ flag = "-penharness"; tag = "\[PenTest\]"; name = "pen"; timeout = 300 },
+    @{ flag = "-seasonharness"; tag = "\[SeasonTest\]"; name = "season"; timeout = 400 },
+    @{ flag = "-wildharness"; tag = "\[WildTest\]"; name = "wild"; timeout = 300 },
+    @{ flag = "-boardharness"; tag = "\[BoardTest\]"; name = "board"; timeout = 300 },
+    @{ flag = "-upgradeharness"; tag = "\[UpgradeTest\]"; name = "upgrade"; timeout = 300 },
+    @{ flag = "-keysharness"; tag = "\[KeysTest\]"; name = "keys"; timeout = 300 },
+    @{ flag = "-hudharness"; tag = "\[HudTest\]"; name = "hud"; timeout = 300 },
+    @{ flag = "-talkharness"; tag = "\[TalkTest\]"; name = "talk"; timeout = 300 },
+    @{ flag = "-tutorharness"; tag = "\[TutorTest\]"; name = "tutor"; timeout = 300 }
 )
 foreach ($r in $runs) {
     if ($Only -and ($Only -notcontains $r.name)) { continue }
@@ -27,5 +40,8 @@ foreach ($r in $runs) {
     $fail = ($lines | Select-String -Pattern "FAIL" -CaseSensitive | Where-Object { $_.Line -match $r.tag }).Count
     $exc = ($lines | Select-String -Pattern "Exception" | Where-Object { $_.Line -notmatch "^\[QA\]" }).Count
     $err = ($lines | Select-String -Pattern "^Error|^\[Error\]|error:" ).Count
-    "== $($r.name): $status, PASS $pass, FAIL $fail, exception lines $exc"
+    $watch = ($lines | Select-String -Pattern "\[ErrorWatch\] errors=(\d+)" | Select-Object -Last 1)
+    $errors = if ($watch) { $watch.Matches[0].Groups[1].Value } else { "?" }
+    "== $($r.name): $status, PASS $pass, FAIL $fail, exception lines $exc, logged errors $errors"
+    if ($watch -and $errors -ne "0") { $lines | Select-String -Pattern "\[ErrorWatch\] #" | ForEach-Object { "     " + $_.Line } }
 }

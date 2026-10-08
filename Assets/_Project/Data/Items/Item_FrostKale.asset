@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76d2165155e1585469c664879a01dfe7, type: 3}
+  m_Name: Item_FrostKale
+  m_EditorClassIdentifier: 
+  id: item_frostkale
+  DisplayName: Frost Kale
+  Description: Leaves that only sweeten in the cold. Eat it raw if you must.
+  Category: 3
+  Icon: {fileID: 21300000, guid: 4ce1de4c4d9cabc429730e3f839c376d, type: 3}
+  PlaceholderColor: {r: 0.43137255, g: 0.6666667, b: 0.5882353, a: 1}
+  MaxStack: 50
+  BaseValue: 18
+  Heal: 25
+  Stamina: 0
+  Buff:
+    Stat: 0
+    Flat: 0
+    Percent: 0
+  BuffSeconds: 0

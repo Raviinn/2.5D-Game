@@ -11,6 +11,8 @@ public sealed class TownHarness : MonoBehaviour
 {
     string dir;
     int failures;
+    // Out of everyone's way: away from the bandit camp and (since Milestone 40) the wolf den in the north-west woods.
+    static readonly Vector3 Parking = new(-2f, 1.1f, 22f);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -45,7 +47,7 @@ public sealed class TownHarness : MonoBehaviour
         if (oswin == null || brenna == null) { Finish(); yield break; }
 
         // Park the player out of the way (NPCs stop walking when you're next to them).
-        motor.Teleport(new Vector3(-12f, 1.1f, 20f), Quaternion.identity);
+        motor.Teleport(Parking, Quaternion.identity);
 
         // ---- Daytime: at work ----
         GoTo(clock, 10f);
@@ -70,7 +72,7 @@ public sealed class TownHarness : MonoBehaviour
                 motor.Teleport(oswin.transform.position + new Vector3(0f, 0.1f, -6f), Quaternion.identity);
                 yield return Wait(0.2f);
                 yield return Shot("t1_walking");
-                motor.Teleport(new Vector3(-12f, 1.1f, 20f), Quaternion.identity);
+                motor.Teleport(Parking, Quaternion.identity);
             }
             yield return null;
         }
@@ -86,7 +88,7 @@ public sealed class TownHarness : MonoBehaviour
         Vector3 held = oswin.transform.position;
         yield return Wait(1.5f);
         Check(oswin.IsWalking && (oswin.transform.position - held).magnitude < 0.05f, "he waits while you stand next to him");
-        motor.Teleport(new Vector3(-12f, 1.1f, 20f), Quaternion.identity);
+        motor.Teleport(Parking, Quaternion.identity);
         yield return Wait(8f);
         Check(oswin.Activity == "At the stall", $"then carries on ({oswin.Activity})");
 
@@ -130,7 +132,7 @@ public sealed class TownHarness : MonoBehaviour
         string Now() => audio.CurrentMusic != null ? audio.CurrentMusic.name : "none";
 
         // Earlier steps (night at the houses) may have drawn bandits into town: send everyone home first.
-        motor.Teleport(new Vector3(-12f, 1.1f, 20f), Quaternion.identity);
+        motor.Teleport(Parking, Quaternion.identity);
         foreach (var e in EnemyController.Active) e.Warp(e.Home, true);
         GoTo(clock, 10f);
         yield return Wait(7f);
@@ -153,7 +155,7 @@ public sealed class TownHarness : MonoBehaviour
         Check(audio.InCombat && audio.CurrentMusic == library.MusicCombat, $"a bandit chasing you starts the combat music in {Time.realtimeSinceStartup - start:0.0} s ({Now()})");
         yield return Wait(1.5f);
         yield return Shot("t3_combat");
-        motor.Teleport(new Vector3(-12f, 1.1f, 20f), Quaternion.identity);
+        motor.Teleport(Parking, Quaternion.identity);
         start = Time.realtimeSinceStartup;
         while (Time.realtimeSinceStartup - start < 20f && audio.CurrentMusic == library.MusicCombat) yield return null;
         Check(!audio.InCombat && audio.CurrentMusic == library.MusicDay, $"after the fight the day music returns ({Time.realtimeSinceStartup - start:0} s, {Now()})");

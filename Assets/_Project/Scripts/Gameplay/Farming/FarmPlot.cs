@@ -127,7 +127,7 @@ namespace Beast.Gameplay
             {
                 var seed = interactor.TryGetComponent(out PlayerFarmer farmer) ? farmer.SelectedSeed : null;
                 var crop = CropCatalog.ForSeed(seed);
-                if (crop == null) return;
+                if (crop == null || !crop.GrowsIn(Calendar.Current)) return;
                 if (playerStats != null && Random.value < playerStats.Get(StatType.SeedSaveChance))
                     EventBus<HudMessageEvent>.Raise(new HudMessageEvent("Seed saved!"));
                 else if (!interactor.Inventory.Remove(seed, 1))
@@ -172,6 +172,12 @@ namespace Beast.Gameplay
                 if (seed == null)
                 {
                     text = "Tilled soil (no seeds)";
+                    canInteract = false;
+                }
+                else if (CropCatalog.ForSeed(seed) is { } crop && !crop.GrowsIn(Calendar.Current))
+                {
+                    text = $"{crop.DisplayName} won't grow in {Calendar.Current.ToString().ToLowerInvariant()} (grows in {crop.SeasonsText})" +
+                           (farmer.HasSeedChoice ? "   ·   V: switch seeds" : string.Empty);
                     canInteract = false;
                 }
                 else
@@ -236,9 +242,18 @@ namespace Beast.Gameplay
 
         void OnDayPassed(DayPassedEvent evt)
         {
+            // A new season kills what can't grow in it (Milestone 46).
+            var season = Calendar.SeasonOf(evt.Day);
+            bool newSeason = season != Calendar.SeasonOf(evt.Day - 1);
+            string killed = null;
             for (int i = 0; i < tiles.Length; i++)
             {
                 ref var tile = ref tiles[i];
+                if (newSeason && tile.Crop != null && !tile.Dead && !tile.Crop.GrowsIn(season))
+                {
+                    tile.Dead = true;
+                    killed ??= tile.Crop.DisplayName;
+                }
                 if (tile.Crop != null && !tile.Dead && !IsRipe(tile))
                 {
                     if (tile.Watered)
@@ -254,6 +269,10 @@ namespace Beast.Gameplay
                 tile.Watered = false; // soil dries overnight...
                 RefreshTile(i);
             }
+            if (killed != null)
+                EventBus<HudMessageEvent>.Raise(new HudMessageEvent(season == Season.Winter
+                    ? $"The first frost killed your {killed} crop."
+                    : $"Your {killed} crop withered: it won't grow in {season.ToString().ToLowerInvariant()}."));
             // ...unless the new day is rainy. Asks the weather for this day directly, so it doesn't matter
             // whether the weather system has handled midnight yet.
             if (Services.TryGet(out WeatherSystem weather) && weather.Roll(evt.Day) == Weather.Rain) WaterAll();

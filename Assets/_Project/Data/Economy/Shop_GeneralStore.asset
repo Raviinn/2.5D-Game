@@ -25,6 +25,14 @@ MonoBehaviour:
     DailyStock: 10
   - Item: {fileID: 11400000, guid: 4f508345f9c80464d9291877b5111771, type: 2}
     DailyStock: 3
+  - Item: {fileID: 11400000, guid: 1b6ab584be8eee74a8e2939dcc493fcf, type: 2}
+    DailyStock: 10
+  - Item: {fileID: 11400000, guid: 387f87c57962d3e448c0e6cf11ab9ac2, type: 2}
+    DailyStock: 8
+  - Item: {fileID: 11400000, guid: 5dbb99b45e188dd4594b3d76ad2821f0, type: 2}
+    DailyStock: 8
+  - Item: {fileID: 11400000, guid: 86767b8a7bcdf0648b2a717a6962bb8a, type: 2}
+    DailyStock: 2
   SellMarkup: 1.25
   BuyRate: 0.5
   Buys: 00000000030000000100000002000000

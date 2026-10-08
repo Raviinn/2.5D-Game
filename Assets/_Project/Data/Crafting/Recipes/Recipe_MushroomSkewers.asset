@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c28d511ad6dd3f488eb9a444c8a3e2a, type: 3}
+  m_Name: Recipe_MushroomSkewers
+  m_EditorClassIdentifier: 
+  id: recipe_mushroomskewers
+  Kind: 1
+  Inputs:
+  - Item: {fileID: 11400000, guid: 7fea90a962174804bb5b55eb0fe94034, type: 2}
+    Count: 2
+  Output: {fileID: 11400000, guid: 71d51f6e281156f4dbdfc958d328c1f9, type: 2}
+  OutputCount: 1

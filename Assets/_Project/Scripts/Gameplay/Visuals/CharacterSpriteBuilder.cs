@@ -3,6 +3,15 @@ using UnityEngine;
 
 namespace Beast.Gameplay
 {
+    /// <summary>The body plan a placeholder sheet is drawn with.</summary>
+    public enum Creature
+    {
+        Humanoid,
+        Wolf,
+        Hen,
+        Cow,
+    }
+
     public enum HairStyle
     {
         Short,
@@ -18,7 +27,7 @@ namespace Beast.Gameplay
     /// for the player, whose sheet is redrawn from their chosen look and current weapon.
     /// Direction cues: eyes and chest emblem shift with facing, and disappear from behind.
     /// </summary>
-    public static class CharacterSpriteBuilder
+    public static partial class CharacterSpriteBuilder
     {
         public const int CellWidth = 48;
         public const int CellHeight = 64;
@@ -61,6 +70,8 @@ namespace Beast.Gameplay
             public bool Greatsword;
             /// <summary>A bow instead of a blade (archers). Attack frames draw and loose an arrow.</summary>
             public bool Bow;
+            /// <summary>What's drawn: a person (default) or a beast (CharacterSpriteBuilder.Beasts.cs).</summary>
+            public Creature Creature;
         }
 
         static readonly Color32 TrailColor = new(255, 250, 220, 255);
@@ -184,6 +195,12 @@ namespace Beast.Gameplay
 
         static void DrawCell(Canvas c, int row, Pose pose, Palette p)
         {
+            switch (p.Creature)
+            {
+                case Creature.Wolf: DrawWolfCell(c, row, pose, p); return;
+                case Creature.Hen: DrawHenCell(c, row, pose, p); return;
+                case Creature.Cow: DrawCowCell(c, row, pose, p); return;
+            }
             if (pose.Lying)
             {
                 FillRect(c, 2, 3, 8, 5, p.Trim);

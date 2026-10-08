@@ -26,6 +26,10 @@ namespace Beast.Gameplay
         [Tooltip("0 = single harvest (tile is cleared). Otherwise watered days until ripe again.")]
         [Min(0)] public int RegrowDays;
 
+        [Header("Seasons (Milestone 46)")]
+        [Tooltip("Seasons it grows in. Empty = all year. Out of season it can't be planted, and the change of season kills it.")]
+        public Season[] Seasons;
+
         [Header("Neglect")]
         [Tooltip("Unwatered days in a row before the crop wilts (stops growing, recovers when watered).")]
         [Min(1)] public int WiltAfterDryDays = 2;
@@ -38,6 +42,19 @@ namespace Beast.Gameplay
         public float PixelsPerUnit = 40f;
 
         public int GrowthStageCount => DaysPerStage?.Length ?? 0;
+
+        public bool GrowsIn(Season season) => Seasons == null || Seasons.Length == 0 || System.Array.IndexOf(Seasons, season) >= 0;
+
+        /// <summary>"spring and summer" / "autumn" / "all year".</summary>
+        public string SeasonsText
+        {
+            get
+            {
+                if (Seasons == null || Seasons.Length == 0 || Seasons.Length >= 4) return "all year";
+                var names = System.Array.ConvertAll(Seasons, s => s.ToString().ToLowerInvariant());
+                return names.Length == 1 ? names[0] : string.Join(", ", names, 0, names.Length - 1) + " and " + names[^1];
+            }
+        }
         public int RipeFrame => GrowthStageCount;
         public int WiltedFrame => GrowthStageCount + 1;
         public int DeadFrame => GrowthStageCount + 2;

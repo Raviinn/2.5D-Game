@@ -1,18 +1,26 @@
 // ============================================================================
 //  BRENNA — blacksmith, "Brenna's Forge". Blunt, guarded, secretly curious.
 //  Gives: Scrap Run (side). Hands in: Roots of the Blight (story, started by Oswin).
-//  Gives you an Iron Helm once you're a Friend of the Hollows.
+//  Gives you an Iron Helm once you're a Friend of the Hollows. Mends worn gear for gold.
 // ============================================================================
 
 === brenna ===
 { quest_state("quest_scraprun") == "ready": -> scrap_done }
 { quest_state("quest_rootsoftheblight") == "active" || quest_state("quest_rootsoftheblight") == "ready": -> roots }
 { standing_tier() >= 3 && not friend_gift: -> friend_gift }
-{ brenna == 1:
+{
+- brenna == 1:
     Brenna: You're the one with the green field. Everyone's talking about it.
-    Brenna: I'm Brenna. If it cuts or it stops a cut, I make it.
+    Brenna: I'm Brenna. If it cuts or it stops a cut, I make it. And you are?
+    Brenna: {player_name()}. Right. I'll remember that if you pay on time.
+- broken_gear():
+    Brenna: {player_name()}, what did you do to that? It's in pieces. Let me mend it before you get yourself killed.
+- wears("weapon_ironswordshield") || wears("weapon_irongreatsword"):
+    Brenna: {~That's good iron on your belt. Look after it.|Still swinging that iron, {player_name()}? Keep the edge clean.}
+- is_night():
+    Brenna: Forge is banked for the night. Talk fast.
 - else:
-    Brenna: {~Forge is hot. Make it quick.|You again. Need steel?|Mind the sparks.}
+    Brenna: {~Forge is hot. Make it quick.|You again, {player_name()}. Need steel?|Mind the sparks.}
 }
 -> menu
 
@@ -20,6 +28,8 @@
 + [Show me your wares.]
     ~ open_shop()
     -> END
++ {repair_cost() > 0} [Can you mend my gear? ({repair_cost()} gold)]
+    -> mend
 + {quest_state("quest_scraprun") == "inactive"} [Any work?]
     -> scrap_offer
 + {quest_state("quest_scraprun") == "active"} [About the scrap...]
@@ -69,6 +79,15 @@ Brenna: Iron's scarce since the war. Bring me four pieces of scrap and I'll pay 
 + [Not right now.]
     Brenna: Suit yourself. The offer stands.
 - -> menu
+
+= mend
+{ gold() >= repair_cost():
+    ~ repair_gear()
+    Brenna: {~There. Good as new, near enough.|Held together with good iron and spite. You're welcome.|Stop hitting things with the edge. Or don't. I like the coin.}
+- else:
+    Brenna: That's {repair_cost()} gold, and you're short. Come back with coin.
+}
+-> menu
 
 = scrap_done
 Brenna: That's good iron. Here.

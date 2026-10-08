@@ -18,6 +18,8 @@ namespace Beast.Gameplay
         [Header("Equipment")]
         public EquipSlot Slot = EquipSlot.Body;
         public StatModifier[] Modifiers;
+        [Tooltip("Uses before it wears out (blows landed for weapons, hits taken for armour). 0 = never wears (Milestone 44).")]
+        [Min(0)] public int Durability;
 
         protected virtual void Reset()
         {

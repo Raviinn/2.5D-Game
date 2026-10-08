@@ -32,7 +32,7 @@ namespace Beast.Gameplay
         Tab tab;
         bool confirmReset;
         List<Vector2Int> resolutions = new();
-        static GUIStyle rowLabel, valueLabel, bannerText;
+        static GUIStyle rowLabel, valueLabel, bannerText, keyCell, keyWaiting;
 
         public bool IsOpen { get; private set; }
 
@@ -74,7 +74,8 @@ namespace Beast.Gameplay
                 return;
             }
             bool escape = Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape;
-            if (escape || UITheme.ConsumeNavBack())
+            if (KeyBindings.Busy) escape = false; // Esc cancels a rebind, not the window
+            if (escape || (!KeyBindings.Busy && UITheme.ConsumeNavBack()))
             {
                 if (escape) Event.current.Use();
                 Close();
@@ -138,7 +139,81 @@ namespace Beast.Gameplay
             o.mouseSensitivity = SliderRow(area, ref y, "Mouse sensitivity", o.mouseSensitivity, 0.25f, 3f, 0.05f, $"{o.mouseSensitivity:0.00}×");
             o.stickSensitivity = SliderRow(area, ref y, "Controller look speed", o.stickSensitivity, 0.25f, 3f, 0.05f, $"{o.stickSensitivity:0.00}×");
             o.invertY = ToggleRow(area, ref y, "Invert vertical look", o.invertY);
-            Note(area, ref y, "Key rebinding comes with the final UI.");
+            DrawKeys(area, ref y, o);
+        }
+
+        static Vector2 keysScroll;
+        const float KeyRowHeight = 44f;
+
+        /// <summary>
+        /// Keys (Milestone 50): every rebindable action with its keyboard key and controller button. Click (or A on
+        /// a focused cell) and press the new key; Esc / Start cancels. Clashes show in red.
+        /// </summary>
+        void DrawKeys(Rect area, ref float y, GameSettings o)
+        {
+            y += 6f;
+            GUI.Label(new Rect(area.x + 4f, y, LabelWidth, 36f), UITheme.Spaced("Keys"), rowLabel);
+            float cellWidth = Mathf.Min(200f, (area.width - LabelWidth - 40f) * 0.5f);
+            float kbX = LabelWidth, padX = LabelWidth + cellWidth + 16f;
+            GUI.Label(new Rect(area.x + kbX, y, cellWidth, 36f), "Keyboard", valueLabel);
+            GUI.Label(new Rect(area.x + padX, y, cellWidth, 36f), "Controller", valueLabel);
+            if (UITheme.BrushButton(new Rect(area.x + 96f, y - 4f, 176f, 40f), "Reset keys", !string.IsNullOrEmpty(o.bindingOverrides)))
+            {
+                KeyBindings.ResetAll();
+                o.bindingOverrides = string.Empty;
+                GUI.changed = true;
+            }
+            y += 42f;
+
+            var view = new Rect(area.x, y, area.width, Mathf.Max(KeyRowHeight * 3f, area.yMax - y));
+            var content = new Rect(0f, 0f, view.width - 18f, KeyBindings.Rows.Length * KeyRowHeight);
+            keysScroll = UITheme.BeginScroll(view, keysScroll, content);
+            for (int i = 0; i < KeyBindings.Rows.Length; i++)
+            {
+                var row = KeyBindings.Rows[i];
+                float ry = i * KeyRowHeight;
+                GUI.Label(new Rect(4f, ry, LabelWidth - 14f, KeyRowHeight - 4f), row.Label, rowLabel);
+                KeyCell(new Rect(kbX, ry + 3f, cellWidth, KeyRowHeight - 8f), i, row, false, o);
+                KeyCell(new Rect(padX, ry + 3f, cellWidth, KeyRowHeight - 8f), i, row, true, o);
+            }
+            UITheme.EndScroll(ref keysScroll, view);
+            y = view.yMax;
+        }
+
+        static void KeyCell(Rect rect, int index, KeyBindings.Row row, bool gamepad, GameSettings o)
+        {
+            var action = KeyBindings.Find(row.Action);
+            bool bindable = KeyBindings.BindingIndex(action, row, gamepad) >= 0;
+            if (!bindable)
+            {
+                string fixedText = gamepad && row.Part != null ? "Left stick" : row.Action == "Heavy" && !gamepad ? "Hold Attack" : "–";
+                GUI.Label(rect, $"<color={UITheme.MutedOnPaperHex}>{fixedText}</color>", rowLabel);
+                return;
+            }
+            bool waiting = KeyBindings.IsRebinding && KeyBindings.RebindingRow == index && KeyBindings.RebindingGamepad == gamepad;
+            UITheme.PaperCard(rect, waiting);
+            string label = waiting ? (gamepad ? "Press a button… (Start: cancel)" : "Press a key… (Esc: cancel)") : KeyBindings.Label(row, gamepad);
+            if (!waiting && Clashes(index, row, gamepad)) label = $"<color={UITheme.VermilionHex}>{label}  (clash)</color>";
+            var style = waiting ? keyWaiting : keyCell;
+            GUI.Label(rect, label, style);
+            if (KeyBindings.IsRebinding || !UITheme.PaperClick(rect)) return;
+            KeyBindings.StartRebind(index, gamepad, bound =>
+            {
+                if (!bound || !Services.TryGet(out SettingsService settings)) return;
+                settings.Current.bindingOverrides = KeyBindings.SaveOverrides();
+                settings.Apply();
+                settings.Save();
+            });
+        }
+
+        /// <summary>True when another row uses the same key (Sprint and Dodge share one on purpose).</summary>
+        static bool Clashes(int index, KeyBindings.Row row, bool gamepad)
+        {
+            string path = KeyBindings.EffectivePath(row, gamepad);
+            if (string.IsNullOrEmpty(path)) return false;
+            for (int i = 0; i < KeyBindings.Rows.Length; i++)
+                if (i != index && KeyBindings.EffectivePath(KeyBindings.Rows[i], gamepad) == path) return true;
+            return false;
         }
 
         void DrawDisplay(Rect area, ref float y, GameSettings o, SettingsService settings)
@@ -194,6 +269,7 @@ namespace Beast.Gameplay
             o.uiScale = SliderRow(area, ref y, "Interface size", o.uiScale, 0.8f, 1.2f, 0.05f, $"{o.uiScale * 100f:0}%");
             o.damageNumbers = ToggleRow(area, ref y, "Damage numbers", o.damageNumbers);
             o.cameraShake = SliderRow(area, ref y, "Camera shake", o.cameraShake, 0f, 1f, 0.05f, o.cameraShake <= 0f ? "Off" : $"{o.cameraShake * 100f:0}%");
+            o.tutorialHints = ToggleRow(area, ref y, "Tutorial hints", o.tutorialHints);
             Note(area, ref y, "Damage numbers off still shows PARRY! and GUARD BREAK.");
         }
 
@@ -205,6 +281,8 @@ namespace Beast.Gameplay
             rowLabel = new GUIStyle(UITheme.PaperBody) { alignment = TextAnchor.MiddleLeft, wordWrap = false };
             valueLabel = new GUIStyle(rowLabel) { normal = { textColor = UITheme.InkGoldDark } };
             bannerText = new GUIStyle(UITheme.InkBody) { alignment = TextAnchor.MiddleLeft, wordWrap = false };
+            keyCell = new GUIStyle(rowLabel) { alignment = TextAnchor.MiddleCenter, richText = true };
+            keyWaiting = new GUIStyle(keyCell) { normal = { textColor = UITheme.OffWhite } };
         }
 
         static float ControlX(Rect area) => area.x + LabelWidth;

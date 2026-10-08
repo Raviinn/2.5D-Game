@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public sealed class HarnessAutoStart : MonoBehaviour
 {
-    static readonly string[] LegacyFlags = { "-uiharness", "-repharness", "-climbharness", "-aiharness", "-skyharness", "-nightharness", "-craftharness", "-townharness" };
+    static readonly string[] LegacyFlags = { "-uiharness", "-repharness", "-climbharness", "-aiharness", "-skyharness", "-nightharness", "-craftharness", "-townharness", "-cinemaharness", "-foeharness", "-folkharness", "-gearharness", "-penharness", "-seasonharness", "-wildharness", "-boardharness", "-upgradeharness", "-keysharness", "-hudharness", "-talkharness", "-tutorharness" };
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()

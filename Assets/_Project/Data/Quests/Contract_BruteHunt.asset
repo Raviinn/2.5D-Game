@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9725793c74b2af64f976e3019de7adbe, type: 3}
+  m_Name: Contract_BruteHunt
+  m_EditorClassIdentifier: 
+  id: contract_brutehunt
+  Title: Brute Hunt
+  Summary: The thing in the dead wood walks again at night. The Hollows pay well
+    to see it fall.
+  Type: 2
+  TurnInAt: the Contracts Board
+  Prerequisites: []
+  RequiredTier: 3
+  Objectives:
+  - Type: 0
+    Description: 
+    Enemy: {fileID: 11400000, guid: 610da9ab0e584a641887969c6599676a, type: 2}
+    Item: {fileID: 0}
+    Crop: {fileID: 0}
+    Count: 1
+  TakeItemsOnTurnIn: 1
+  AutoComplete: 0
+  GoldReward: 180
+  ItemRewards: []
+  CombatXp: 120
+  FarmingXp: 0
+  StandingReward: 20

@@ -21,6 +21,7 @@ MonoBehaviour:
   HarvestXp: 6
   DaysPerStage: 010000000100000002000000
   RegrowDays: 0
+  Seasons: 000000000100000002000000
   WiltAfterDryDays: 2
   DieAfterDryDays: 3
   Sheet: {fileID: 2800000, guid: 1982dfde65007ef41818c3e00d80fd04, type: 3}

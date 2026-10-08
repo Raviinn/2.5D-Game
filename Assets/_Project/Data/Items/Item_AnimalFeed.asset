@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7604650e9ce23fe4db4d83738dd72438, type: 3}
+  m_Name: Item_AnimalFeed
+  m_EditorClassIdentifier: 
+  id: item_animalfeed
+  DisplayName: Animal Feed
+  Description: A sack of oats and chaff. One sackful fills the trough for a day.
+  Category: 0
+  Icon: {fileID: 21300000, guid: 66957bd0dd421b64780553f919888c02, type: 3}
+  PlaceholderColor: {r: 0.76862746, g: 0.6666667, b: 0.43137255, a: 1}
+  MaxStack: 99
+  BaseValue: 4

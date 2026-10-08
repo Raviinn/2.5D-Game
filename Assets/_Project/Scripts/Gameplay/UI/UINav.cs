@@ -1,3 +1,4 @@
+using Beast.Core;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -162,6 +163,9 @@ namespace Beast.Gameplay
         /// <summary>What to show on a key cap: the key, or the pad button that does the same while a pad is in use.</summary>
         public static string KeyLabel(string key)
         {
+            // Rebound keys (Milestone 50) show what you chose.
+            string rebound = KeyBindings.Rebound(key, UsingGamepad);
+            if (rebound != null) return rebound;
             if (!UsingGamepad || key == null) return key;
             return key switch
             {
@@ -170,6 +174,8 @@ namespace Beast.Gameplay
                 "Enter" => "A",
                 "F" => "↑",
                 "Shift" => "B",
+                "LMB" => "X",
+                "RMB" => "LB",
                 "A / D" => "L-stick",
                 "W / S" => "L-stick",
                 "Tab" => "View",

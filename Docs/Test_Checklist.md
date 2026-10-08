@@ -1,4 +1,4 @@
-# Full Test Checklist — Milestones 1 → 35 (+ QA fixes, cleanups)
+# Full Test Checklist — Milestones 1 → 53 (+ QA fixes, cleanups)
 
 **Build under test:** Unity project `Beast`, everything through Milestone 4e (Dialogue & Quests), plus the polish pass (new UI theme, HUD, pause menu, environment art — setup menu "Milestone 9") light reputation (setup menu "Milestone 10") climbing & ledges (setup menu "Milestone 11") per-pixel sprite shadows (setup menu "Milestone 12") smarter enemies (setup menu "Milestone 13") day/night & weather (setup menu "Milestone 14") night danger & fatigue (setup menu "Milestone 15") and the main menu & save slots (setup menu "Milestone 16").
 **Format:** each line is **Action → Expected result**. Tick it only if the expected result happens **and the Console shows no new red errors or yellow warnings**.
@@ -673,7 +673,7 @@ Run **Beast → Setup → Run Milestone 25 Setup (Archers & Jump Links)** first 
 
 Run **Beast → Setup → Run Milestone 26 Setup (Crafting)** first → "Milestone 26 crafting setup complete". A workbench (a wooden table with a little anvil and pot) now stands beside your bed.
 
-- [ ] Walk up to the workbench → **[E] Use workbench**. Press E → the **Workbench** window opens on parchment and the game pauses.
+- [ ] Walk up to the workbench → **[F] Use workbench**. Press F → the **Workbench** window opens on parchment and the game pauses.
 - [ ] Three cards on the left: **Alchemy, Cooking, Smithing**. The number on each is how many recipes you can make right now (out of how many).
 - [ ] Each recipe row shows the result's icon and name, what it needs (short items in red), and what it does.
 - [ ] Harvest Healroot, then **Craft** a Healing Draught → 2 Healroot gone, +1 draught, a pouring sound and "Made Healing Draught." With too little Healroot the button is greyed.
@@ -689,7 +689,7 @@ Run **Beast → Setup → Run Milestone 26 Setup (Crafting)** first → "Milesto
 
 Run **Beast → Setup → Run Milestone 27 Setup (Storage Chest)** first (after Milestone 26) → "Milestone 27 storage setup complete". A wooden chest with iron bands now stands beside your bed.
 
-- [ ] Walk up to the chest → **[E] Open storage chest** → the chest window opens and the game pauses. The top right shows how full the bag and chest are.
+- [ ] Walk up to the chest → **[F] Open storage chest** → the chest window opens and the game pauses. The top right shows how full the bag and chest are.
 - [ ] **Store** moves one, **All** moves the whole stack; **Take / All** on the chest side bring things back. No "+N item" notices pop up while moving.
 - [ ] **Store crops, seeds & materials** → all crops, seeds and materials go into the chest; food, potions and gear stay in the bag.
 - [ ] With Healroot only in the chest, open the workbench → the Healing Draught row says "(chest)" and can be crafted; the Healroot comes out of the chest.
@@ -706,7 +706,7 @@ Run **Beast → Setup → Run Milestone 28 Setup (Names & Mirror)** first → "M
 - [ ] Character screen → Gear view: the name under your figure.
 - [ ] Save, quit to title → Load Game: the slot card's details start with the name.
 - [ ] A new game with the name left empty → you're "Wanderer".
-- [ ] Walk to the mirror → **[E] Change your look** → "The mirror" window with your current look and name, holding your current weapon.
+- [ ] Walk to the mirror → **[F] Change your look** → "The mirror" window with your current look and name, holding your current weapon.
 - [ ] Type a name containing I, C or J → the window stays open (those keys don't close it).
 - [ ] Change the hair and name → **Keep this look** → your sprite changes, "You are now …" shows, the HUD name updates.
 - [ ] Open it again, change things, then **Cancel** (or Esc) → nothing changes.
@@ -760,6 +760,68 @@ No setup needed. Plug in a gamepad (Xbox-style layout assumed for the labels).
 - [ ] **Beast → Build → Windows (Release)** → the build finishes and Explorer opens `Builds/Windows` with Beast.exe. Run it → the title screen, music, a new game, play a minute, save, quit, run again, Continue → all work. No dev overlay or debug keys in this build.
 - [ ] **Windows (Development)** → same, into `Builds/Windows (Dev)`, with the dev overlay and F-keys.
 - [ ] `git status` doesn't list anything under `Builds/`.
+
+## 13aa. Batch 2 setups (Milestones 37–53)
+
+Run, in order: **Beast → Setup → Run Milestone 37, 40, 43, 44, 45, 46, 47, 48, 49, 51, 53 Setup**. Each ends with "… setup complete" and no errors.
+
+## 13ab. Conversation camera (Milestone 36)
+
+- [ ] Talk to Oswin → you and he turn to face each other; the camera glides (about ¾ s) to a shot from behind your right shoulder: your back in the left foreground, Oswin in the middle.
+- [ ] His name is centred in gold over a thin gold line; the line sits centred under it and types out without shifting. No portrait box.
+- [ ] Choices appear on the right as dark pills with numbered discs; the selected one has a gold edge.
+- [ ] Esc → the camera glides back to behind you, facing Oswin.
+
+## 13ac. Chest and minimap trail (Milestones 37, 38)
+
+- [ ] The storage chest stands beside the bed, on the floor, not on the farm field. F opens it.
+- [ ] Accept Bandit Trouble → a trail of gold dots on the minimap leads to the nearest bandit, round houses, drifting toward it; the large map (M) shows it too. Stand at the target → it shrinks away.
+
+## 13ad. New enemies (Milestone 40)
+
+- [ ] North-west woods: three Grey Wolves. They chase together, circle behind you, bite, then dart away. Drops: Wolf Pelt.
+- [ ] Bandit camp: the Shieldbearer raises his shield; hits from the front are blocked (small numbers) until "GUARD BREAK"; hits from behind land fully.
+- [ ] Past the camp, only at night: the Blighted Brute. Its slams can't be interrupted (no stagger mid-swing). Drops Blight Ichor. Gone by day, back the next night.
+- [ ] Workbench: Fur Leggings (smithing) and Ichor Draught (alchemy).
+
+## 13ae. Townsfolk (Milestone 43)
+
+- [ ] Maren (by the square, by day): "Could you see to my wounds?" heals you; she sells remedies; Herbs for Maren (3 Healroot).
+- [ ] Tobin (by the field): farming tips; Wolves at the Fold (kill 3 wolves).
+- [ ] Captain Hale (out at night, asleep in the tower by day): Shield Wall, then The Thing in the Dead Wood.
+
+## 13af. Durability (Milestone 44)
+
+- [ ] Bag / Character → gear shows "Condition N%". Hitting bandits wears your weapon; being hit wears your armour. The dummy doesn't.
+- [ ] Below 25%: "badly worn" notice. At 0%: "broke!" and its bonus stops.
+- [ ] Brenna: "Can you mend my gear? (N gold)". Workbench → Smithing → Mend with Iron Scrap.
+
+## 13ag. Animals (Milestone 45)
+
+- [ ] A pen near the homestead: three hens and Bess the cow wander inside it.
+- [ ] Fill the trough (Animal Feed from Oswin, or 2 turnips). Next morning: "Collect the egg" / "Milk Bess". Pet them daily. Unfed: nothing the next day.
+- [ ] Cooking: Fried Eggs, Farmhouse Omelette, Warm Milk.
+
+## 13ah. Seasons (Milestone 46)
+
+- [ ] HUD clock reads "Spr 1 08:00". F1 through the days: Summer on day 15, Autumn 29, Winter 43, with a message each time.
+- [ ] Autumn: orange trees and grass. Winter: snow on the ground, bare oaks, no flowers or grass tufts, snowfall instead of rain.
+- [ ] Turnips can't be planted in winter (the prompt says why); the first frost kills them. Frost Kale grows only in winter, Pumpkins only in autumn.
+- [ ] Spring 8: seeds half price. Autumn 14: crops sell for half as much again. Oswin mentions both.
+
+## 13ai. Foraging and fishing (Milestone 47)
+
+- [ ] Coloured clusters around the woods: "Gather Wild Garlic" (spring), berries, mushrooms, winterberries; back after 3 days.
+- [ ] Buy a Fishing Rod from Oswin; at the pond: "Cast a line" → wait → "!" press F → press F when the needle is on the gold, three times. Two misses and it gets away. Night Pike only at night in autumn and winter.
+
+## 13aj. Contracts, upgrades, keys, HUD, names, tutorial (Milestones 48–53)
+
+- [ ] The board shows four contracts, different each day; a taken contract stays until handed in.
+- [ ] The plans by the bed: build the Kitchen Garden (a new 4×4 field appears), Larger Chest (100 slots), Copper Still (two servings), Hay Loft (trough lasts 3 days).
+- [ ] Settings → Controls → Keys: click a key, press a new one; the HUD and tips use it. Esc cancels. "Reset keys".
+- [ ] Bandit plates disappear behind houses; wolves' plates sit low. Lock on → a bar at the top. Getting hit from the side shows a red arrow that way.
+- [ ] People use your name; Oswin and Maren notice when you're hurt; Brenna notices broken gear; rain and night change greetings.
+- [ ] New game: a "FIRST DAY" card at the top left walks you through moving, farming, talking to Oswin, the dummy and sleeping. Esc → How to play. Settings → Interface → Tutorial hints off hides it.
 
 ---
 

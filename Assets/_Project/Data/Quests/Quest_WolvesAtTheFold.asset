@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9725793c74b2af64f976e3019de7adbe, type: 3}
+  m_Name: Quest_WolvesAtTheFold
+  m_EditorClassIdentifier: 
+  id: quest_wolvesatthefold
+  Title: Wolves at the Fold
+  Summary: A wolf pack dens in the north-west woods and took Maren's last goats.
+    Tobin wants it gone.
+  Type: 1
+  TurnInAt: Tobin
+  Prerequisites: []
+  RequiredTier: 0
+  Objectives:
+  - Type: 0
+    Description: 
+    Enemy: {fileID: 11400000, guid: f265a8a8f41f2124ead57496af14c366, type: 2}
+    Item: {fileID: 0}
+    Crop: {fileID: 0}
+    Count: 3
+  TakeItemsOnTurnIn: 1
+  AutoComplete: 0
+  GoldReward: 45
+  ItemRewards:
+  - Item: {fileID: 11400000, guid: d605ac237ec54b64db635459af7da046, type: 2}
+    Count: 6
+  CombatXp: 50
+  FarmingXp: 0
+  StandingReward: 0

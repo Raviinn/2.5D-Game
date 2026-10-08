@@ -36,6 +36,13 @@ namespace Beast.Gameplay
             if (immediate) transform.rotation = rotation;
         }
 
+        /// <summary>Turns to a direction straight away (conversations start while the game is paused).</summary>
+        public void FaceNow(Vector3 direction)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(direction);
+        }
+
         void Update()
         {
             var target = restRotation;

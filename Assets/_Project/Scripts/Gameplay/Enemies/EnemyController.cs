@@ -16,6 +16,10 @@ namespace Beast.Gameplay
     /// - Archers (EnemyData.Ranged): keep their distance, draw (the telegraph) and loose arrows whenever they can see
     ///   you, climbing or not; they don't take melee turns, and only give up when they can neither see nor reach you.
     /// - Follows you up low walls and down drops along WorldNavigation's jump links (vaulting up, dropping down).
+    /// - Shieldbearers (EnemyData.Shield) close in behind a raised shield: hits from the front are blocked until the
+    ///   guard runs out (heavy blows drain it fastest), then it breaks and they're staggered. Hit them from the side.
+    /// - Pack hunters (wolves) wait for their turn behind or beside you, and dart away after each bite.
+    /// - Brutes (SuperArmor) can't be staggered or pushed back mid-attack.
     /// </summary>
     [RequireComponent(typeof(CharacterController), typeof(Combatant))]
     public sealed class EnemyController : MonoBehaviour, ICharacterAnimationSource
@@ -75,6 +79,12 @@ namespace Beast.Gameplay
         float vaultTime, vaultDuration;
         State afterVault;
 
+        // Shield, pack
+        Stamina guard;
+        MovesetData guardSettings;
+        float retreatUntil = -1f;
+        float flankAngle;
+
         // Turn-taking
         float tokenTakenAt;
         float tokenReleaseAt = -1f;
@@ -96,13 +106,19 @@ namespace Beast.Gameplay
         public bool CanSeePlayer => canSee;
         public bool IsVaulting => state == State.Vault;
         float AggroRange => data.AggroRange * (Emboldened ? 1f + data.NightAggroBonus : 1f);
-        float MoveSpeed => data.MoveSpeed * (Emboldened ? 1f + data.NightSpeedBonus : 1f);
+        float MoveSpeed => data.MoveSpeed * (Emboldened ? 1f + data.NightSpeedBonus : 1f) *
+                           (combatant.IsBlocking ? data.GuardMoveShare : 1f);
+        /// <summary>Shieldbearers: guard left (0..1), or 1 for everyone else.</summary>
+        public float GuardFraction => guard != null && guard.Max > 0f ? guard.Current / guard.Max : 1f;
+        /// <summary>Pack hunters: true while darting away after a bite.</summary>
+        public bool Retreating => Time.time < retreatUntil;
 
         public CharacterAnim CurrentAnim =>
             state == State.Dead ? CharacterAnim.Dead :
             state == State.Staggered ? CharacterAnim.Hurt :
             attacks != null && attacks.IsAttacking ? CharacterAnim.Attack :
             state == State.Vault || planarSpeed > 0.2f ? CharacterAnim.Run :
+            combatant != null && combatant.IsBlocking ? CharacterAnim.Block :
             CharacterAnim.Idle;
 
         public float AnimationSpeed =>
@@ -133,6 +149,20 @@ namespace Beast.Gameplay
             cooldown = data.AttackCooldown;
             strafeSign = Random.value < 0.5f ? -1f : 1f;
 
+            flankAngle = (Random.value < 0.5f ? -1f : 1f) * Random.Range(35f, 75f);
+            if (data.Shield)
+            {
+                guard = GetComponent<Stamina>() != null ? GetComponent<Stamina>() : gameObject.AddComponent<Stamina>();
+                guard.Initialize(data.GuardMax, data.GuardRegen, 1f);
+                combatant.Stamina = guard;
+                guardSettings = ScriptableObject.CreateInstance<MovesetData>();
+                guardSettings.name = "Shield guard";
+                guardSettings.ParryWindow = -1f; // enemies never parry
+                guardSettings.BlockDamageReduction = data.GuardDamageReduction;
+                guardSettings.BlockStaminaPerDamage = data.GuardCostPerDamage;
+                guardSettings.GuardBreakStaggerDuration = data.GuardBreakStagger;
+            }
+
             if (data.Ranged)
             {
                 // The draw is an "attack" with no hitbox: the sprite and the telegraph follow its timing, and the
@@ -150,6 +180,7 @@ namespace Beast.Gameplay
         void OnDestroy()
         {
             if (shot != null) Destroy(shot);
+            if (guardSettings != null) Destroy(guardSettings);
         }
 
         void OnEnable()
@@ -198,7 +229,9 @@ namespace Beast.Gameplay
                     planarSpeed = attacks.IsAttacking ? 0f : new Vector2(move.x, move.z).magnitude / dt;
                     displacement += move;
                 }
+                UpdateGuard();
             }
+            combatant.SuperArmor = data.SuperArmor && attacks.IsAttacking;
             combatant.Telegraphing = attacks.CurrentPhase == AttackExecutor.Phase.Startup;
 
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
@@ -247,6 +280,11 @@ namespace Beast.Gameplay
                     cooldown = data.Ranged ? data.ShotCooldown : data.AttackCooldown;
                     state = State.Chase;
                     tokenReleaseAt = Time.time + TurnRest;
+                    if (data.RetreatAfterAttack > 0f)
+                    {
+                        retreatUntil = Time.time + data.RetreatAfterAttack;
+                        EndTurn(); // the next wolf can go while this one backs off
+                    }
                 }
                 return lunge;
             }
@@ -279,6 +317,14 @@ namespace Beast.Gameplay
             if (distance > AggroRange * 1.5f || Flat(transform.position - spawnPosition).magnitude > data.LeashRange ||
                 unreachableTime > data.GiveUpAfter)
                 return GoHome();
+
+            if (Retreating)
+            {
+                // Dart away from the player, then turn and come round again.
+                Vector3 away = distance > 0.01f ? -toPlayer / distance : -transform.forward;
+                FaceDirection(away, dt);
+                return Steer(transform.position + away * 4f, MoveSpeed, dt, 0.2f) + SeparationPush(dt);
+            }
 
             FacePlayer(dt, 1f);
             if (data.Ranged) return ThinkRanged(toPlayer, distance, dt);
@@ -379,6 +425,16 @@ namespace Beast.Gameplay
         /// <summary>Waiting for a turn: keep HoldDistance from the player, circling slowly.</summary>
         Vector3 HoldRing(Vector3 toPlayer, float distance, float dt)
         {
+            if (data.PackHunter)
+            {
+                // Circle round to a spot behind or beside the player (each wolf has its own angle), so they flank.
+                Vector3 behind = Flat(-player.transform.forward);
+                if (behind.sqrMagnitude < 0.01f) behind = -toPlayer;
+                Vector3 spot = player.transform.position + Quaternion.Euler(0f, flankAngle, 0f) * behind.normalized * data.HoldDistance;
+                if (Flat(spot - transform.position).magnitude > 0.6f) return Steer(spot, MoveSpeed, dt, 0.4f);
+                return Vector3.zero;
+            }
+
             // Too far: approach along the path first.
             if (distance > data.HoldDistance + 1.5f)
                 return Steer(player.transform.position, MoveSpeed, dt, data.HoldDistance);
@@ -420,6 +476,18 @@ namespace Beast.Gameplay
                 if (d < Separation) push += away.normalized * (Separation - d);
             }
             return push * (MoveSpeed * 0.8f * dt);
+        }
+
+        /// <summary>Shieldbearers raise the shield while closing in or holding, and lower it to attack.</summary>
+        void UpdateGuard()
+        {
+            if (guard == null) return;
+            bool engaged = state == State.Chase && !attacks.IsAttacking && player != null && !player.IsDead &&
+                           Flat(player.transform.position - transform.position).magnitude < AggroRange;
+            // After a guard break, the shield only comes back up once some guard has returned.
+            bool want = engaged && (combatant.IsBlocking || guard.Current >= guard.Max * 0.35f);
+            if (want && !combatant.IsBlocking) combatant.StartBlock(guardSettings);
+            else if (!want && combatant.IsBlocking) combatant.EndBlock();
         }
 
         void CheckReachable()
@@ -582,7 +650,16 @@ namespace Beast.Gameplay
             if (data.RespawnDelay <= 0f) return;
             respawnTimer -= dt;
             if (respawnTimer > 0f) return;
+            RespawnNow();
+        }
 
+        /// <summary>Back at home, healed and idle (also used by NightPresence when a night-only enemy returns).</summary>
+        public void RespawnNow()
+        {
+            attacks?.Cancel();
+            EndTurn();
+            retreatUntil = -1f;
+            if (guard != null) guard.Refill();
             transform.SetPositionAndRotation(spawnPosition, spawnRotation);
             controller.enabled = true;
             canSee = false;
@@ -594,7 +671,7 @@ namespace Beast.Gameplay
             state = State.Idle;
         }
 
-        void SetVisible(bool visible)
+        public void SetVisible(bool visible)
         {
             foreach (var r in renderers) r.enabled = visible;
         }

@@ -39,6 +39,8 @@ namespace Beast.Gameplay
         SceneLoader loader;
         readonly SettingsPanel settingsPanel = new();
         QuitTarget confirmQuit;
+        bool guideOpen;
+        Vector2 guideScroll;
         string message;
         float messageTime;
         GUIStyle tileLabel, tileBlurb, keyStyle, actionStyle, statusStyle;
@@ -68,20 +70,27 @@ namespace Beast.Gameplay
         public (string key, string label)[] KeyHints => null;
 
         /// <summary>A settings category or a quit confirm is open (Esc closes it before the menu).</summary>
-        public bool HasSubView => settingsPanel.IsOpen || confirmQuit != QuitTarget.None;
+        public bool HasSubView => settingsPanel.IsOpen || confirmQuit != QuitTarget.None || guideOpen;
+        /// <summary>The "How to play" page is showing (Milestone 53).</summary>
+        public bool GuideOpen => guideOpen;
 
         public void CloseSubView()
         {
             if (confirmQuit != QuitTarget.None) confirmQuit = QuitTarget.None;
             else if (settingsPanel.IsOpen) settingsPanel.Close();
+            else if (guideOpen) guideOpen = false;
         }
 
         public void OnTabOpened()
         {
             if (settingsPanel.IsOpen) settingsPanel.Close();
             confirmQuit = QuitTarget.None;
+            guideOpen = false;
             message = null;
         }
+
+        /// <summary>Opens the "How to play" page. Tests use it.</summary>
+        public void OpenGuide() => guideOpen = true;
 
         /// <summary>Opens a settings category inline (0 Controls, 1 Display, 2 Audio, 3 Interface). Tests use it.</summary>
         public void OpenCategory(int category) => settingsPanel.Open(category);
@@ -91,6 +100,7 @@ namespace Beast.Gameplay
             if (state == null) Start();
             EnsureStyles();
             if (settingsPanel.IsOpen) DrawCategory(content);
+            else if (guideOpen) DrawGuide(content);
             else DrawHome(content);
         }
 
@@ -124,6 +134,9 @@ namespace Beast.Gameplay
             int slot = save != null ? save.ActiveSlot : 0;
 
             if (UITheme.BrushButton(new Rect(x, y, buttonWidth, buttonHeight), "Resume")) state.SetState(GameState.Playing);
+            y += buttonHeight + spacing;
+
+            if (UITheme.BrushButton(new Rect(x, y, buttonWidth, buttonHeight), "How to play")) guideOpen = true;
             y += buttonHeight + spacing;
 
             if (UITheme.BrushButton(new Rect(x, y, buttonWidth, buttonHeight), "Save game", save != null))
@@ -181,6 +194,42 @@ namespace Beast.Gameplay
             if (UITheme.BrushButton(new Rect(rect.x + half + 12f, rect.y + 22f, half, rect.height), "Cancel")) confirmQuit = QuitTarget.None;
         }
 
+        // ---------- How to play (Milestone 53) ----------
+
+        static (string title, string body)[] GuideSections() => new[]
+        {
+            ("The farm", $"Till grass with [{UITheme.KeyLabel("F")}], plant seeds, water them. Watered crops grow one stage a night; two dry days and they wilt, three and they die. Rain waters everything. [{UITheme.KeyLabel("V")}] switches seeds. Hold [{UITheme.KeyLabel("F")}] to work a whole row."),
+            ("Seasons", "Each season lasts 14 days. Turnips and Healroot grow spring to autumn, pumpkins in autumn, frost kale in winter. The change of season kills what can't grow in it. Spring 8 is the Planting Festival; the last day of autumn is the Harvest Fair."),
+            ("Fighting", $"[{UITheme.KeyLabel("LMB")}] attacks (hold for a heavy blow), [{UITheme.KeyLabel("RMB")}] blocks; tap it just before a hit to parry. [{UITheme.KeyLabel("Shift")}] dodges through attacks. Enemies glow before they swing. Shieldbearers block from the front: go round. Wolves circle behind you."),
+            ("Night", "After dark bandits hit harder and carry more, and something big walks the dead wood. Stay up too long and you tire. Sleep in your bed to skip to morning: it saves the game."),
+            ("Town", "Talk to people for quests and trade. The contracts board posts new work every day. Helping the Free Hollows raises your standing: better prices, more contracts, gifts."),
+            ("Homestead", "The workbench brews, cooks, smiths and mends worn gear. The chest stores what you don't carry. Feed the animals at the trough for eggs and milk. The plans by the bed list improvements to build."),
+            ("Out and about", "Wild food grows back a few days after you gather it. Buy a rod from Oswin and fish at the pond: press on the bite, then each time the needle crosses the gold."),
+        };
+
+        void DrawGuide(Rect content)
+        {
+            if (UITheme.BrushButton(new Rect(content.x, content.y, 64f, 46f), "‹")) guideOpen = false;
+            GUI.Label(new Rect(content.x + 84f, content.y, 600f, 46f), UITheme.Spaced("How to play"), UITheme.InkHeader);
+            UITheme.Fill(new Rect(content.x, content.y + 60f, content.width, 1f), new Color(UITheme.Ink.r, UITheme.Ink.g, UITheme.Ink.b, 0.4f));
+
+            var view = new Rect(content.x, content.y + 78f, content.width, content.height - 78f);
+            var sections = GuideSections();
+            float column = (view.width - 18f - 24f) * 0.5f;
+            const float cardHeight = 150f;
+            int rows = (sections.Length + 1) / 2;
+            var inner = new Rect(0f, 0f, view.width - 18f, rows * (cardHeight + 16f));
+            guideScroll = UITheme.BeginScroll(view, guideScroll, inner);
+            for (int i = 0; i < sections.Length; i++)
+            {
+                var card = new Rect(i % 2 * (column + 24f), i / 2 * (cardHeight + 16f), column, cardHeight);
+                UITheme.PaperCard(card, false);
+                GUI.Label(new Rect(card.x + 20f, card.y + 12f, card.width - 40f, 30f), UITheme.Spaced(sections[i].title), UITheme.InkHeader);
+                GUI.Label(new Rect(card.x + 20f, card.y + 46f, card.width - 40f, card.height - 56f), sections[i].body, UITheme.PaperBody);
+            }
+            UITheme.EndScroll(ref guideScroll, view);
+        }
+
         // ---------- A category, inline ----------
 
         void DrawCategory(Rect content)
@@ -212,13 +261,26 @@ namespace Beast.Gameplay
             float rowHeight = Mathf.Min(28f, (area.height - 72f) / Controls.Length);
             foreach (var (key, action) in Controls)
             {
-                GUI.Label(new Rect(area.x + 22f, y, 170f, rowHeight), key, keyStyle);
+                GUI.Label(new Rect(area.x + 22f, y, 170f, rowHeight), WithRebinds(key), keyStyle);
                 GUI.Label(new Rect(area.x + 196f, y, area.width - 218f, rowHeight), action, actionStyle);
                 y += rowHeight;
             }
         }
 
         // ---------- Helpers ----------
+
+        /// <summary>"F" → "H" once Interact is rebound (Milestone 50); each default key in the text is swapped.</summary>
+        static string WithRebinds(string keys)
+        {
+            foreach (var row in KeyBindings.Rows)
+            {
+                if (string.IsNullOrEmpty(row.DefaultKey)) continue;
+                string now = KeyBindings.Rebound(row.DefaultKey, false);
+                if (now == null) continue;
+                keys = System.Text.RegularExpressions.Regex.Replace(keys, $@"(?<![A-Za-z]){System.Text.RegularExpressions.Regex.Escape(row.DefaultKey)}(?![A-Za-z])", now);
+            }
+            return keys;
+        }
 
         void EnsureStyles()
         {

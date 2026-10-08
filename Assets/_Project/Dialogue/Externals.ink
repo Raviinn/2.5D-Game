@@ -23,6 +23,16 @@ EXTERNAL gold()
 // Player ------------------------------------------------------------------------
 EXTERNAL discipline_level(name)                 // "Combat" | "Farming"
 EXTERNAL player_name()                          // the hero's name from the character creator ("Wanderer" if none)
+EXTERNAL heal_player()                          // restores the player's health and stamina (healers)
+EXTERNAL is_night()                             // true from dusk to dawn
+EXTERNAL weather()                              // "Clear" | "Cloudy" | "Rain" (snow in winter counts as Rain)
+EXTERNAL hurt()                                 // true below half health
+EXTERNAL wears(item_id)                         // true if this item is equipped (weapons: either hand)
+EXTERNAL broken_gear()                          // true if anything you have equipped is worn out
+EXTERNAL season()                               // "Spring" | "Summer" | "Autumn" | "Winter"
+EXTERNAL festival()                             // "Planting Festival" | "Harvest Fair" | "" (none today)
+EXTERNAL repair_cost()                          // gold to repair all worn gear (0 when nothing is worn)
+EXTERNAL repair_gear()                          // pays and repairs all worn gear; returns true if done
 
 // Standing with the Free Hollows ------------------------------------------------
 EXTERNAL standing()                             // points, 0-500
@@ -65,6 +75,36 @@ EXTERNAL open_shop()                            // opens this NPC's shop when th
 
 === function player_name() ===
 ~ return "Wanderer"
+
+=== function heal_player() ===
+~ return
+
+=== function is_night() ===
+~ return false
+
+=== function weather() ===
+~ return "Clear"
+
+=== function hurt() ===
+~ return false
+
+=== function wears(item_id) ===
+~ return false
+
+=== function broken_gear() ===
+~ return false
+
+=== function season() ===
+~ return "Spring"
+
+=== function festival() ===
+~ return ""
+
+=== function repair_cost() ===
+~ return 0
+
+=== function repair_gear() ===
+~ return false
 
 === function standing() ===
 ~ return 0
