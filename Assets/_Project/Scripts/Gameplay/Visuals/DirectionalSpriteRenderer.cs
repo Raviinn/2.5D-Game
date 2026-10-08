@@ -277,7 +277,8 @@ namespace Beast.Gameplay
             return null;
         }
 
-        void OnDrawGizmos()
+        // Only when selected: in edit mode the sprite itself is drawn (Editor/SpriteEditPreview).
+        void OnDrawGizmosSelected()
         {
             // Sprites only render in Play Mode; this keeps characters visible and selectable in the Scene view.
             if (sheet == null) return;

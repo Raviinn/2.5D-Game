@@ -72,3 +72,7 @@ MonoBehaviour:
   AmbienceNight: {fileID: 8300000, guid: c63594c648b3dff40b8b8ee92f988fb3, type: 3}
   AmbienceRain: {fileID: 8300000, guid: 15aacd94ce877354396136048420ccef, type: 3}
   AmbienceMenu: {fileID: 8300000, guid: 16f1fd331d338d14b82819035e2acccb, type: 3}
+  MusicMenu: {fileID: 8300000, guid: 4e20b46589085be4b924152f8e03e2c7, type: 3}
+  MusicDay: {fileID: 8300000, guid: 6df82fb7dfe25604fa077a8e98fa059b, type: 3}
+  MusicNight: {fileID: 8300000, guid: 63df3c1f313274349b571d23901bde01, type: 3}
+  MusicCombat: {fileID: 8300000, guid: 4f07f63784d2799478d39ef29b82d71c, type: 3}

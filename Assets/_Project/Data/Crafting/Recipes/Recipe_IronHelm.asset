@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c28d511ad6dd3f488eb9a444c8a3e2a, type: 3}
+  m_Name: Recipe_IronHelm
+  m_EditorClassIdentifier: 
+  id: recipe_ironhelm
+  Kind: 2
+  Inputs:
+  - Item: {fileID: 11400000, guid: 151065e72e0416841a939823bf770d21, type: 2}
+    Count: 1
+  - Item: {fileID: 11400000, guid: b49b18a7746d8764abbc1d0457e6710d, type: 2}
+    Count: 5
+  Output: {fileID: 11400000, guid: aff556a9355109143bfab54632caa584, type: 2}
+  OutputCount: 1

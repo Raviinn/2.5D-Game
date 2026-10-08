@@ -1,4 +1,4 @@
-# Full Test Checklist — Milestones 1 → 35 (+ QA fixes)
+# Full Test Checklist — Milestones 1 → 35 (+ QA fixes, cleanups)
 
 **Build under test:** Unity project `Beast`, everything through Milestone 4e (Dialogue & Quests), plus the polish pass (new UI theme, HUD, pause menu, environment art — setup menu "Milestone 9") light reputation (setup menu "Milestone 10") climbing & ledges (setup menu "Milestone 11") per-pixel sprite shadows (setup menu "Milestone 12") smarter enemies (setup menu "Milestone 13") day/night & weather (setup menu "Milestone 14") night danger & fatigue (setup menu "Milestone 15") and the main menu & save slots (setup menu "Milestone 16").
 **Format:** each line is **Action → Expected result**. Tick it only if the expected result happens **and the Console shows no new red errors or yellow warnings**.
@@ -103,7 +103,7 @@ Go to the Bandits (northeast).
 - [ ] Characters cast shadows on the ground from every camera angle, with **no dark diagonal band across their own body**.
 - [ ] Walk into a building's shadow → your sprite darkens smoothly; step out → it brightens.
 - [ ] Stand between the sun and the Dummy → the Dummy darkens (full shading or in bands).
-- [ ] In the Scene view (not playing), characters show as cyan boxes. That's expected.
+- [ ] In the Scene view (not playing), characters show as their idle sprites (since Milestone 23; a cyan box marks the selected one).
 
 ---
 
@@ -752,6 +752,15 @@ No setup needed. Plug in a gamepad (Xbox-style layout assumed for the labels).
 - [ ] Moving the mouse hides the focus frame; the mouse still works everywhere as before.
 - [ ] Keyboard only: arrow keys + Enter navigate the same way (W / S still move the title menu; typing a name isn't interrupted).
 
+## 13z. Cleanups & Windows Build (Milestone 23)
+
+- [ ] **Beast → Setup → Run Milestone 23 Setup (Cleanup)** → "SampleScene deleted"; `Assets/Scenes` is gone; Build Settings lists Bootstrap, MainMenu, World_Test.
+- [ ] Open World_Test without pressing Play → the player, enemies and NPCs show as their sprites (front idle frame) in the Scene view, turning to face the scene camera as you orbit. Selecting one shows its cyan box.
+- [ ] **Beast → Show Character Sprites in Edit Mode** unticks → back to nothing drawn; tick it again → they return. The scene isn't marked as changed by any of this.
+- [ ] **Beast → Build → Windows (Release)** → the build finishes and Explorer opens `Builds/Windows` with Beast.exe. Run it → the title screen, music, a new game, play a minute, save, quit, run again, Continue → all work. No dev overlay or debug keys in this build.
+- [ ] **Windows (Development)** → same, into `Builds/Windows (Dev)`, with the dev overlay and F-keys.
+- [ ] `git status` doesn't list anything under `Builds/`.
+
 ---
 
 ## 14. Full Save / Load Round-Trip (every system)
@@ -800,7 +809,6 @@ Set up a varied state, save, change everything, then load:
 ## Known Limitations (not bugs — don't report)
 
 - The inventory, trade and character screens are **mouse-only** placeholder UI (no gamepad navigation yet).
-- Characters are invisible in the **Scene view** outside Play Mode (cyan boxes only).
 - Thin shadows (e.g. a sword) don't show on other characters; shading happens in whole-sprite bands.
 - Enemies walk straight at you and can get stuck behind houses (no pathfinding yet).
 - No climbing, day/night lighting, weather or reputation yet.

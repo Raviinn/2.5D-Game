@@ -22,3 +22,8 @@ MonoBehaviour:
   BaseValue: 12
   Heal: 15
   Stamina: 0
+  Buff:
+    Stat: 0
+    Flat: 0
+    Percent: 0
+  BuffSeconds: 0

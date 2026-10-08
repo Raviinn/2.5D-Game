@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 1.24 |
+| **Version** | 1.25 |
 | **Last updated** | 2026-10-08 |
 | **Author** | Joseph |
 | **Engine** | Unity 6 LTS (6000.0.34f1), URP |
@@ -994,6 +994,9 @@ Each step builds its milestone's assets and scene objects. All steps are safe to
 | Run Milestone 27 Setup (Storage Chest) | The 60-slot `Storage_Chest` beside the bed (kept on re-run), linked to the workbench so crafting can use its contents |
 | Run Milestone 26 Setup (Crafting) | Three new foods (Stamina Tonic, Roast Turnips, Turnip Stew) with icons, eight recipes in `Data/Crafting/Recipes`, the `RecipeBook`, the `Workbench` beside the bed, and Player Buffs on the player. Re-running keeps your edits and adds missing recipes to the book |
 | Run Milestone 25 Setup (Archers & Jump Links) | Bandit Archer data (`Enemy_BanditArcher`, kept if it exists), placeholder sprites with a bow (`Sheet_BanditArcher`), and `Bandit_Archer` at the bandit camp. Jump links need no setup |
+| Run Milestone 23 Setup (Cleanup) | Deletes Unity's unused template scene (`Assets/Scenes/SampleScene`) and keeps it out of Build Settings |
+| **Beast → Build → Windows (Development / Release)** | Builds the ticked scenes into `Builds/Windows` (or `Builds/Windows (Dev)`, with the dev overlay and debug keys) and opens the folder. `Builds/` is ignored by git. About 110 MB |
+| **Beast → Show Character Sprites in Edit Mode** | On by default: characters show as their idle sprite in the Scene and Game views outside Play Mode (drawn by the editor, nothing saved into the scene); the cyan box only shows for the selected character |
 | Run Milestone 24 Setup (Fall Damage & Climbing Down) | Adds Player Fall Damage to the player and the 10 m `Ivy_Tower` to the climbing course (rebuilt on re-run; re-running Milestone 11 removes it, so run 24 again after it). Climbing down needs no setup |
 | Run Milestone 20 Setup (Sound) | Synthesises the placeholder sounds into `Audio/Placeholder` and fills `Resources/SoundLibrary` (keeps clips you've swapped in). The sound player needs no scene changes |
 | Run Milestone 19 Setup (Character Look) | Adds Player Appearance to the player and marks each combat style with the weapon it shows (greatsword / sword &amp; shield). The creator itself needs no setup |
@@ -1074,7 +1077,7 @@ Damage values are before the attacker's Attack stat and the target's Defense.
 | 1 | **Backbone** | ✅ Verified | Bootstrapper, services, events, save/load, input, game states, world clock, data layer |
 | 2 | **Combat prototype** | ✅ Verified — *fun* | Knight (2 styles), Bandit, Dummy; dodge/block/parry, lock-on, hit-stop |
 | 3 | **Sprite tech** | ✅ Verified | 8-dir billboards, shadow quads, attack-synced animation, placeholder sheets |
-| 4 | **Systems** | 🟡 In progress | 4a Items/inventory/loot ✅ · 4b Farming ✅ · 4c Economy & shops ✅ · 4d Stats & progression ✅ · 4e Dialogue & quests 🟡 (Ink, quests, contracts — awaiting test) · Light reputation 🟡 (awaiting test) · Climbing & ledges 🟡 (awaiting test) · Sprite shadows 🟡 (awaiting test) · Smarter enemies 🟡 (awaiting test) · Day/night & weather 🟡 (awaiting test) · Night danger & fatigue 🟡 (awaiting test) · Main menu & save slots 🟡 (awaiting test) · Settings 🟡 (awaiting test) · Item icons 🟡 · Character creator & weapon looks 🟡 · Placeholder sound 🟡 (awaiting test) · Fall damage & climbing down 🟡 · Archers & jump links 🟡 · Crafting 🟡 · Storage chest 🟡 · Names & mirror 🟡 · NPC schedules 🟡 · Music 🟡 · Controller navigation 🟡 |
+| 4 | **Systems** | 🟡 In progress | 4a Items/inventory/loot ✅ · 4b Farming ✅ · 4c Economy & shops ✅ · 4d Stats & progression ✅ · 4e Dialogue & quests 🟡 (Ink, quests, contracts — awaiting test) · Light reputation 🟡 (awaiting test) · Climbing & ledges 🟡 (awaiting test) · Sprite shadows 🟡 (awaiting test) · Smarter enemies 🟡 (awaiting test) · Day/night & weather 🟡 (awaiting test) · Night danger & fatigue 🟡 (awaiting test) · Main menu & save slots 🟡 (awaiting test) · Settings 🟡 (awaiting test) · Item icons 🟡 · Character creator & weapon looks 🟡 · Placeholder sound 🟡 (awaiting test) · Fall damage & climbing down 🟡 · Archers & jump links 🟡 · Crafting 🟡 · Storage chest 🟡 · Names & mirror 🟡 · NPC schedules 🟡 · Music 🟡 · Controller navigation 🟡 · Cleanups & first Windows build ✅ |
 | 5 | Vertical slice | ⬜ | Prologue + homestead + 1 wild zone, polished; playtest with strangers |
 | 6 | Steam page + demo | ⬜ | Wishlists, devlogs |
 | 7 | Content & polish | ⬜ | Full v1 region |
@@ -1139,10 +1142,8 @@ Requested features and accepted compromises, to revisit before the vertical slic
 | Sprite shadow offset | Limitation | A sprite ignores shadows from anything within its Self-Shadow Offset toward the sun (e.g. a character pressed right against another one) | Fine for now; a per-character shadow ID in the shadow map would remove it |
 | Prototype UI (IMGUI) | Tech debt | Every screen shares one theme, scales with resolution and works with mouse, pad and arrow keys (Milestone 35) | Port to UI Toolkit when real art arrives (§20) |
 | **Full regression test pass** | QA | Not yet run. `Test_Checklist.md` (MegaGame101 folder) covers Milestones 1 → 4d, ~150 checks | Run the whole checklist with fresh saves and Error Pause on; fix anything found. Do this before the vertical slice (or sooner if bugs appear). Extend the checklist with each new milestone |
-| Sprites invisible in Scene view | Tooling | Characters show as cyan boxes outside Play Mode (environment billboards do show) | Edit-mode sprite preview |
 | Generated environment layout | Tooling | The Milestone 9 setup rebuilds `Environment_Dressing` from scratch on every run | Hand-built levels replace it at the vertical slice |
 | Enemy name plates through walls | UI | An enemy's name and health bar show even when a house is between you and it (seen at night in town) | Hide plates without a line of sight |
-| Build Settings | Cleanup | `Assets/Scenes/SampleScene` (Unity's template scene) is still in the build list | Remove it before the first build |
 
 ---
 
@@ -1171,6 +1172,7 @@ Requested features and accepted compromises, to revisit before the vertical slic
 | 2026-09-29 | 0.5 | Milestone 3 verified; sprite shadow shader deferred. Milestone 4a: items, inventory, loot, consumables, gold, inventory screen. |
 | 2026-09-29 | 0.6 | 4a verified. Climbing & ledge grab added to backlog. Milestone 4b farming: interaction system, field, Turnip & Healroot, watering/wilt/death, regrowth, bed. |
 | 2026-09-30 | 0.7 | 4b verified. Milestone 4c economy: shop pricing, supply & demand, restock, merchant Oswin, trade screen, trade events, reputation price hook. |
+| 2026-10-08 | 1.25 | **Milestone 23 — cleanups.** Characters are drawn as sprites in the Scene view outside Play Mode (editor-only; toggle under Beast). The unused SampleScene is removed (it was already out of the build list). New Beast → Build → Windows (Development / Release). First release build: 107 MB, starts cleanly and passes the main-menu test (new game into the world). |
 | 2026-10-08 | 1.24 | **Milestone 35 — controller support.** Kept the IMGUI screens (the UI Toolkit port waits for real art) and added navigation to every themed control: focus frame, D-pad / stick / arrow keys to move, A / Enter to press, left / right on sliders and steppers, scroll-to-focus, B to back out (now also bound to Resume), pad labels in key hints and key caps, a Random name button for pad players. Bag slots are navigable and show details on focus. |
 | 2026-10-08 | 1.23 | **Milestone 33 — placeholder music.** Four synthesised folk-style loops (title, day, night, combat) that crossfade by game state, clock and danger: combat music while enemies chase you nearby, holding a few seconds after. Quieter under menus. Settings → Audio → Music now does something. |
 | 2026-10-08 | 1.22 | **Milestone 31 — NPC schedules.** Oswin and Brenna keep daily routines: work from 06:00, lunch and evenings at the well, Brenna checking the contract board, and sleeping at home at night (hidden; no trading or markers). They walk the navigation mesh, stop for you, and snap into place after time skips. NPCs no longer cut holes in the navigation mesh. |

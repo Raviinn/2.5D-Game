@@ -73,7 +73,7 @@ namespace Beast.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             Debug.Log("[Setup] Milestone 3 sprite setup complete. Characters render as sprites in Play Mode " +
-                      "(the Scene view shows cyan boxes for them).");
+                      "(outside Play Mode the Scene view shows their idle frame).");
         }
 
         internal static string CreateSheet(string characterName, PlaceholderSpriteGenerator.Palette palette)
